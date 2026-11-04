@@ -74,6 +74,36 @@ class Repository private constructor(context: Context) {
         it.copy(ownedPaintIds = if (owned) it.ownedPaintIds + paintId else it.ownedPaintIds - paintId)
     }
 
+    fun setToBuy(paintId: String, toBuy: Boolean) = mutate {
+        it.copy(toBuyIds = if (toBuy) it.toBuyIds + paintId else it.toBuyIds - paintId)
+    }
+
+    fun addAllToBuy(ids: Collection<String>) = mutate { it.copy(toBuyIds = it.toBuyIds + ids) }
+
+    /** Pot acheté : il quitte la liste d'achat et rejoint la collection. */
+    fun markBought(paintId: String) = mutate {
+        it.copy(toBuyIds = it.toBuyIds - paintId, ownedPaintIds = it.ownedPaintIds + paintId)
+    }
+
+    // ------------------------------------------------------------ codes-barres
+
+    /**
+     * Retrouve le pot d'un code-barres : d'abord les codes déjà appris,
+     * puis la structure des EAN Vallejo (8429551 + référence à 5 chiffres + clé).
+     */
+    fun paintForBarcode(code: String, d: AppData = _data.value): Paint? {
+        val all = allPaints(d)
+        d.barcodes[code]?.let { id -> all.firstOrNull { it.id == id }?.let { return it } }
+        if (code.length == 13 && code.startsWith("8429551")) {
+            val ref = code.substring(7, 12) // ex. 70951
+            val formatted = ref.substring(0, 2) + "." + ref.substring(2) // 70.951
+            all.firstOrNull { it.brand == Brand.VALLEJO && it.code == formatted }?.let { return it }
+        }
+        return null
+    }
+
+    fun linkBarcode(code: String, paintId: String) = mutate { it.copy(barcodes = it.barcodes + (code to paintId)) }
+
     fun addCustomPaint(name: String, range: String, hex: String): Paint {
         val paint = Paint(
             id = "custom_" + UUID.randomUUID().toString().take(8),
@@ -90,6 +120,8 @@ class Repository private constructor(context: Context) {
         d.copy(
             customPaints = d.customPaints.filterNot { it.id == id },
             ownedPaintIds = d.ownedPaintIds - id,
+            toBuyIds = d.toBuyIds - id,
+            barcodes = d.barcodes.filterValues { it != id },
         )
     }
 

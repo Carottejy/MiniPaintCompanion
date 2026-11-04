@@ -145,6 +145,19 @@ fun ProjectDetailScreen(
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.secondary,
                             )
+                            val missingIds = used.map { it.id }.filter { it !in data.ownedPaintIds }
+                            val notListed = missingIds.filter { it !in data.toBuyIds }
+                            if (notListed.isEmpty()) {
+                                Text(
+                                    "Ils sont tous dans ta liste d'achat.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            } else {
+                                TextButton(onClick = { repo.addAllToBuy(notListed) }) {
+                                    Text("Ajouter ${notListed.size} pot${if (notListed.size > 1) "s" else ""} à la liste d'achat")
+                                }
+                            }
                         }
                     }
                 }

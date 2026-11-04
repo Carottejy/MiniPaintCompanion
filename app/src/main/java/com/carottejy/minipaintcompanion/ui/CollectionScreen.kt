@@ -25,6 +25,13 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.Inventory2
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material.icons.outlined.AddShoppingCart
+import androidx.compose.material.icons.outlined.Palette
+import androidx.compose.material.icons.outlined.QrCodeScanner
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -56,6 +63,8 @@ fun CollectionScreen(
     data: AppData,
     repo: Repository,
     onOpenCatalog: () -> Unit,
+    onScan: () -> Unit,
+    onHarmonies: (Paint) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val all = remember(data) { repo.allPaints(data) }
@@ -74,7 +83,14 @@ fun CollectionScreen(
                 "Parcours les catalogues Citadel, Vallejo, Army Painter et Prince August et coche les pots que tu as sur ton étagère.",
                 Modifier.weight(1f),
             )
-            Button(onClick = onOpenCatalog, modifier = Modifier.padding(bottom = 120.dp)) { Text("Ouvrir le catalogue") }
+            Row(Modifier.padding(bottom = 120.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(onClick = onOpenCatalog) { Text("Ouvrir le catalogue") }
+                OutlinedButton(onClick = onScan) {
+                    Icon(Icons.Outlined.QrCodeScanner, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("Scanner")
+                }
+            }
         }
         return
     }
@@ -113,6 +129,14 @@ fun CollectionScreen(
                         modifier = Modifier.padding(start = 8.dp),
                     )
                 }
+                if (p.id in data.toBuyIds) {
+                    Icon(
+                        Icons.Filled.ShoppingCart,
+                        contentDescription = "À racheter",
+                        tint = MaterialTheme.colorScheme.secondary,
+                        modifier = Modifier.padding(start = 8.dp).size(18.dp),
+                    )
+                }
             },
             modifier = Modifier.fillMaxSize(),
         )
@@ -132,6 +156,28 @@ fun CollectionScreen(
                     else {
                         Text("Utilisé dans :")
                         used.forEach { Text("• ${it.name.ifBlank { "Sans titre" }}") }
+                    }
+                    Spacer(Modifier.height(16.dp))
+                    val toBuy = p.id in data.toBuyIds
+                    FilledTonalButton(
+                        onClick = { repo.setToBuy(p.id, !toBuy) },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Icon(
+                            if (toBuy) Icons.Filled.ShoppingCart else Icons.Outlined.AddShoppingCart,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(if (toBuy) "Dans la liste d'achat (retirer)" else "Pot presque vide : à racheter")
+                    }
+                    OutlinedButton(
+                        onClick = { selected = null; onHarmonies(p) },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Icon(Icons.Outlined.Palette, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("Harmonies de couleurs")
                     }
                 }
             },
@@ -162,7 +208,7 @@ fun CatalogScreen(data: AppData, repo: Repository, onBack: () -> Unit) {
                     Column {
                         Text("Catalogue")
                         Text(
-                            "${data.ownedPaintIds.size} pots dans ta collection",
+                            "${data.ownedPaintIds.size} possédés · ${data.toBuyIds.size} à acheter  (☑ = je l'ai, 🛒 = à acheter)",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -180,6 +226,17 @@ fun CatalogScreen(data: AppData, repo: Repository, onBack: () -> Unit) {
             ownedIds = data.ownedPaintIds,
             isChecked = { it.id in data.ownedPaintIds },
             onToggle = { p, owned -> repo.setOwned(p.id, owned) },
+            rowTrailing = { p ->
+                val inList = p.id in data.toBuyIds
+                IconButton(onClick = { repo.setToBuy(p.id, !inList) }) {
+                    Icon(
+                        if (inList) Icons.Filled.ShoppingCart else Icons.Outlined.AddShoppingCart,
+                        contentDescription = if (inList) "Retirer de la liste d'achat" else "Ajouter à la liste d'achat",
+                        tint = if (inList) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Checkbox(checked = p.id in data.ownedPaintIds, onCheckedChange = { repo.setOwned(p.id, it) })
+            },
             modifier = Modifier.fillMaxSize().padding(padding),
         )
     }

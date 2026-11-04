@@ -49,4 +49,8 @@ data class AppData(
     val projects: List<Project> = emptyList(),
     val ownedPaintIds: Set<String> = emptySet(),
     val customPaints: List<Paint> = emptyList(),
+    /** Pots à acheter ou à racheter. */
+    val toBuyIds: Set<String> = emptySet(),
+    /** Codes-barres appris : code EAN/UPC -> identifiant du pot. */
+    val barcodes: Map<String, String> = emptyMap(),
 )

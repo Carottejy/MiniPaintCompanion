@@ -114,7 +114,7 @@ fun PaintLine(
                 if (owned == false) {
                     Spacer(Modifier.width(8.dp))
                     Text(
-                        "à acheter",
+                        "pas en stock",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.secondary,
                     )

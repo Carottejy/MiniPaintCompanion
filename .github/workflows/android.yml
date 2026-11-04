@@ -30,8 +30,8 @@ jobs:
       - name: APK signé
         run: |
           chmod +x gradlew
-          ./gradlew assembleRelease --no-daemon
-          cp app/build/outputs/apk/release/app-release.apk MiniPaintCompanion-${VERSION_NAME}.apk
+          ./gradlew assembleGithubRelease --no-daemon
+          cp app/build/outputs/apk/github/release/app-github-release.apk MiniPaintCompanion-${VERSION_NAME}.apk
 
       - uses: actions/upload-artifact@v4
         with:

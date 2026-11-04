@@ -4,12 +4,27 @@ Carnet de peinture de figurines pour Android.
 
 - **Réalisations** : photo de la figurine terminée (appareil photo ou galerie), nom, notes, et toutes les étapes de peinture.
 - **Étapes** : titre (sous-couche, aplats, lavis…), technique **pinceau** ou **aérographe**, pots utilisés, notes (dilution, pression…). Réordonnables.
-- **Collection** : les pots que tu possèdes, cochés depuis le catalogue ; pots perso pour les autres marques.
+- **Collection** : les pots que tu possèdes, cochés depuis le catalogue ou **scannés au code-barres** ; pots perso pour les autres marques. Un pot presque vide se marque « à racheter ».
+- **Achats** : la liste des pots à acheter/racheter (depuis la collection, le catalogue, une réalisation ou l'onglet Couleurs). Cocher un pot acheté — ou le scanner — le fait passer dans la collection. Liste partageable.
+- **Couleurs** : roue chromatique du peintre (RJB) ou de la lumière (RVB), harmonies (complémentaire, adjacentes, analogue, triade, rectangle, carré, camaïeu) et ombre/lumière ; pour chaque couleur, les pots du catalogue ou de ta collection les plus proches (écart ΔE en L*a*b*).
 - **Catalogue** : Citadel, Vallejo (Model Color, Game Color, Model Air, Xpress, lavis), The Army Painter (Warpaints, Quickshade, Speedpaint, bombes), Prince August — recherche par nom ou référence, filtres marque/gamme.
 
 - **Sauvegarde / restauration** (menu ⋮) : exporte toutes les réalisations, photos, la collection et les pots perso dans un `.zip` (Drive, Téléchargements…), et le réimporte sur un autre téléphone.
 
 Les données restent sur le téléphone (fichier JSON + photos dans l'espace privé de l'app) ; pense à faire une sauvegarde avant de changer d'appareil.
+
+## Scan des codes-barres
+
+Le scanner de Google Play services lit les EAN/UPC. Les pots Vallejo sont reconnus automatiquement (EAN `8429551` + référence). Pour les autres marques, le premier scan d'un code inconnu demande de choisir le pot ; le code est ensuite mémorisé (et inclus dans la sauvegarde).
+
+## Mise à jour automatique
+
+L'APK GitHub interroge `releases/latest` au lancement (au plus toutes les 6 h) et propose d'installer la nouvelle version par-dessus. **L'API GitHub ne répond pas sans authentification sur un dépôt privé** : la mise à jour automatique ne fonctionne que si le dépôt (ou un dépôt de publication dédié) est public.
+
+## Variantes
+
+- `github` : APK des Releases, avec mise à jour automatique (`./gradlew assembleGithubRelease`).
+- `play` : pour le Play Store, sans auto-update ni permission `REQUEST_INSTALL_PACKAGES`, interdites par Google Play (`./gradlew bundlePlayRelease`).
 
 ## Installer l'APK
 
@@ -24,10 +39,10 @@ Chaque push sur `main` compile l'APK signé et publie automatiquement une **Rele
 
 ## Développement
 
-Kotlin + Jetpack Compose (Material 3), kotlinx.serialization, Coil, Navigation Compose. `minSdk 26`, `targetSdk 35`.
+Kotlin + Jetpack Compose (Material 3), kotlinx.serialization, Coil, Navigation Compose. `minSdk 26`, `targetSdk 36`.
 
 ```bash
-./gradlew assembleRelease   # app/build/outputs/apk/release/app-release.apk
+./gradlew assembleGithubRelease   # app/build/outputs/apk/github/release/app-github-release.apk
 ```
 
 Le catalogue est dans `app/src/main/java/com/carottejy/minipaintcompanion/data/Catalog.kt` (une ligne par pot : `référence|nom|#teinte`). Les teintes sont des approximations d'écran.

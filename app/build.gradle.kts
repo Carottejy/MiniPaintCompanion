@@ -7,12 +7,12 @@ plugins {
 
 android {
     namespace = "com.carottejy.minipaintcompanion"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.carottejy.minipaintcompanion"
         minSdk = 26
-        targetSdk = 35
+        targetSdk = 36  // exigé par Google Play depuis le 31 août 2026
         // Le CI passe le numéro de build pour que chaque APK soit installable par-dessus le précédent.
         versionCode = (System.getenv("VERSION_CODE") ?: "1").toInt()
         versionName = System.getenv("VERSION_NAME") ?: "1.0.0"
@@ -37,6 +37,21 @@ android {
         }
     }
 
+    // Deux distributions :
+    //  - github : APK des Releases GitHub, avec mise à jour automatique intégrée ;
+    //  - play   : pour le Play Store, qui interdit qu'une app se mette à jour hors Play.
+    flavorDimensions += "distribution"
+    productFlavors {
+        create("github") {
+            dimension = "distribution"
+            buildConfigField("boolean", "SELF_UPDATE", "true")
+        }
+        create("play") {
+            dimension = "distribution"
+            buildConfigField("boolean", "SELF_UPDATE", "false")
+        }
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -46,6 +61,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
     lint {
         checkReleaseBuilds = false
@@ -68,4 +84,6 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
     implementation("io.coil-kt:coil-compose:2.7.0")
+    // Scanner de codes-barres de Google Play services : pas de permission caméra à demander.
+    implementation("com.google.android.gms:play-services-code-scanner:16.1.0")
 }
