@@ -36,6 +36,8 @@ Chaque nouvelle version s'installe par-dessus la précédente sans perdre les do
 
 ## Publier une version
 
+Les notes de version sont dans `app/src/main/assets/CHANGELOG.md` (affichées dans l'onglet Info). La première section, titrée `## @VERSION@ — @DATE@`, décrit les changements à venir : la CI y inscrit le numéro et la date, et s'en sert comme texte de la release. Avant d'ajouter de nouveaux changements, remplacer `@VERSION@ — @DATE@` de la section précédente par la version publiée, puis ouvrir une nouvelle section `@VERSION@`.
+
 Chaque push sur `main` compile l'APK signé et publie automatiquement une **Release** `v1.0.<numéro de build>` avec l'APK attaché (marquée *latest*).
 
 ## Développement

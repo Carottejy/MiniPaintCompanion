@@ -17,6 +17,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Air
 import androidx.compose.material.icons.outlined.Brush
+import androidx.compose.material.icons.outlined.BubbleChart
+import androidx.compose.material.icons.outlined.Create
+import androidx.compose.material.icons.outlined.FormatColorFill
 import androidx.compose.material.icons.outlined.PhotoCamera
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -49,6 +52,19 @@ val Technique.icon: ImageVector
     get() = when (this) {
         Technique.BRUSH -> Icons.Outlined.Brush
         Technique.AIRBRUSH -> Icons.Outlined.Air
+        Technique.SPRAY -> Icons.Outlined.FormatColorFill
+        Technique.SPONGE -> Icons.Outlined.BubbleChart
+        Technique.PEN -> Icons.Outlined.Create
+    }
+
+/** Couleur d'accent de chaque technique (badges, puces). */
+val Technique.accent: Color
+    get() = when (this) {
+        Technique.BRUSH -> Color(0xFFD9A441)
+        Technique.AIRBRUSH -> Color(0xFF7FB3A6)
+        Technique.SPRAY -> Color(0xFFC8553D)
+        Technique.SPONGE -> Color(0xFFB59BD6)
+        Technique.PEN -> Color(0xFF8FB0E0)
     }
 
 fun Brand.shortLabel(): String = when (this) {
@@ -153,7 +169,7 @@ fun ProjectPhoto(file: File?, modifier: Modifier = Modifier, contentScale: Conte
 
 @Composable
 fun TechniqueBadge(technique: Technique, modifier: Modifier = Modifier) {
-    val color = if (technique == Technique.AIRBRUSH) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.primary
+    val color = technique.accent
     Row(
         modifier
             .clip(RoundedCornerShape(50))

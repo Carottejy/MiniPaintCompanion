@@ -22,7 +22,13 @@ data class Paint(
     val displayName: String get() = if (code.isBlank()) name else "$name ($code)"
 }
 
-enum class Technique(val label: String) { BRUSH("Pinceau"), AIRBRUSH("Aérographe") }
+enum class Technique(val label: String) {
+    BRUSH("Pinceau"),
+    AIRBRUSH("Aérographe"),
+    SPRAY("Bombe"),
+    SPONGE("Éponge"),
+    PEN("Stylo"),
+}
 
 @Serializable
 data class Step(

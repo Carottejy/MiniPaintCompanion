@@ -73,7 +73,10 @@ object VoiceParser {
 
         val norm = normalize(body)
         val technique = when {
-            Regex("""aerograph|\baero\b|airbrush|aerosol|bombe""").containsMatchIn(norm) -> Technique.AIRBRUSH
+            Regex("""\bbombe|aerosol|spray|rattle ?can""").containsMatchIn(norm) -> Technique.SPRAY
+            Regex("""eponge|sponge""").containsMatchIn(norm) -> Technique.SPONGE
+            Regex("""\bstylo|feutre|marqueur|posca|\bmarker|\bpen\b""").containsMatchIn(norm) -> Technique.PEN
+            Regex("""aerograph|\baero\b|airbrush""").containsMatchIn(norm) -> Technique.AIRBRUSH
             Regex("""pinceau|brush""").containsMatchIn(norm) && !norm.contains("dry brush") -> Technique.BRUSH
             else -> null
         }

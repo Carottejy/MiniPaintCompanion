@@ -27,6 +27,13 @@ jobs:
           java-version: 17
           cache: gradle
 
+      - name: Notes de version
+        run: |
+          sed -i "s/@VERSION@/${VERSION_NAME}/; s#@DATE@#$(date +%d/%m/%Y)#" app/src/main/assets/CHANGELOG.md
+          # Première section du changelog = notes de cette release
+          awk 'NR==1{next} /^## /{exit} {print}' app/src/main/assets/CHANGELOG.md > notes.md
+          printf "\nTélécharge MiniPaintCompanion-%s.apk depuis ton téléphone Android et ouvre-le pour l'installer. Les mises à jour s'installent par-dessus la version précédente sans perdre tes projets ni tes peintures.\n" "$VERSION_NAME" >> notes.md
+
       - name: APK signé
         run: |
           chmod +x gradlew
@@ -53,4 +60,4 @@ jobs:
           gh release delete "v$VERSION_NAME" --yes --cleanup-tag 2>/dev/null || true
           gh release create "v$VERSION_NAME" MiniPaintCompanion-$VERSION_NAME.apk \
             --title "MiniPaintCompanion $VERSION_NAME" --latest \
-            --notes "Télécharge MiniPaintCompanion-$VERSION_NAME.apk depuis ton téléphone Android et ouvre-le pour l'installer. Les mises à jour s'installent par-dessus la version précédente sans perdre tes projets ni tes peintures."
+            --notes-file notes.md

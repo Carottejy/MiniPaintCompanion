@@ -45,6 +45,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -468,14 +469,16 @@ private fun StepEditorCard(
                     }
                 }
                 Spacer(Modifier.height(10.dp))
-                SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
-                    Technique.entries.forEachIndexed { i, t ->
-                        SegmentedButton(
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Technique.entries.forEach { t ->
+                        FilterChip(
                             selected = step.technique == t,
                             onClick = { onChange { it.copy(technique = t) } },
-                            shape = SegmentedButtonDefaults.itemShape(index = i, count = Technique.entries.size),
-                            icon = { Icon(t.icon, contentDescription = null, modifier = Modifier.size(18.dp)) },
-                        ) { Text(t.label) }
+                            label = { Text(t.label) },
+                            leadingIcon = {
+                                Icon(t.icon, contentDescription = null, modifier = Modifier.size(18.dp), tint = t.accent)
+                            },
+                        )
                     }
                 }
                 Spacer(Modifier.height(6.dp))
@@ -498,8 +501,13 @@ private fun StepEditorCard(
                     label = { Text("Notes") },
                     placeholder = {
                         Text(
-                            if (step.technique == Technique.AIRBRUSH) "Dilution, pression, buse…"
-                            else "Dilution, pinceau, astuces…"
+                            when (step.technique) {
+                                Technique.AIRBRUSH -> "Dilution, pression, buse…"
+                                Technique.SPRAY -> "Distance, nombre de passes, temps de séchage…"
+                                Technique.SPONGE -> "Type d'éponge, zones, intensité…"
+                                Technique.PEN -> "Pointe, zones, finitions…"
+                                Technique.BRUSH -> "Dilution, pinceau, astuces…"
+                            }
                         )
                     },
                     minLines = 1,

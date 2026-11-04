@@ -65,6 +65,8 @@ import com.carottejy.minipaintcompanion.ui.ProjectDetailScreen
 import com.carottejy.minipaintcompanion.ui.ProjectEditorScreen
 import com.carottejy.minipaintcompanion.ui.ProjectsScreen
 import com.carottejy.minipaintcompanion.ui.ColorsScreen
+import com.carottejy.minipaintcompanion.ui.InfoScreen
+import androidx.compose.material.icons.outlined.Info
 import com.carottejy.minipaintcompanion.ui.ShoppingScreen
 import com.carottejy.minipaintcompanion.ui.UnknownBarcodeSheet
 import com.carottejy.minipaintcompanion.ui.BarcodeScannerOverlay
@@ -167,6 +169,7 @@ private val TABS = listOf(
     Tab("Catalogue", "Catalogue"),
     Tab("Liste d'achat", "Achat"),
     Tab("Théorie des couleurs", "Théorie"),
+    Tab("Informations", "Info"),
 )
 
 private const val T_PROJECTS = 0
@@ -174,6 +177,7 @@ private const val T_PAINTS = 1
 private const val T_CATALOG = 2
 private const val T_SHOPPING = 3
 private const val T_THEORY = 4
+private const val T_INFO = 5
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -196,6 +200,15 @@ private fun HomeScreen(
     val onOpenCatalog = { tab = T_CATALOG }
 
     fun toast(msg: String) = Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+
+    fun checkUpdate() {
+        scope.launch {
+            runCatching { Updater.check(context, auto = false) }.fold(
+                { info -> if (info != null) onUpdateFound(info) else toast("Tu as déjà la dernière version") },
+                { e -> toast("Vérification impossible : ${e.message}") },
+            )
+        }
+    }
 
     // ---------------------------------------------------------------- scan
 
@@ -302,15 +315,7 @@ private fun HomeScreen(
                                         }
                                     },
                                     leadingIcon = { Icon(Icons.Outlined.SystemUpdate, contentDescription = null) },
-                                    onClick = {
-                                        menuOpen = false
-                                        scope.launch {
-                                            runCatching { Updater.check(context, auto = false) }.fold(
-                                                { info -> if (info != null) onUpdateFound(info) else toast("Tu as déjà la dernière version") },
-                                                { e -> toast("Vérification impossible : ${e.message}") },
-                                            )
-                                        }
-                                    },
+                                    onClick = { menuOpen = false; checkUpdate() },
                                 )
                             }
                         }
@@ -331,7 +336,8 @@ private fun HomeScreen(
                                 T_PAINTS -> Icons.Outlined.Inventory2
                                 T_CATALOG -> Icons.Outlined.MenuBook
                                 T_SHOPPING -> Icons.Outlined.ShoppingCart
-                                else -> Icons.Outlined.Palette
+                                T_THEORY -> Icons.Outlined.Palette
+                                else -> Icons.Outlined.Info
                             }
                             if (i == T_SHOPPING && data.toBuyIds.isNotEmpty()) {
                                 BadgedBox(badge = { Badge { Text("${data.toBuyIds.size}") } }) {
@@ -346,7 +352,7 @@ private fun HomeScreen(
                                 t.label,
                                 maxLines = 1,
                                 softWrap = false,
-                                style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 0.sp, fontSize = 11.sp),
+                                style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 0.sp, fontSize = 10.sp),
                             )
                         },
                         alwaysShowLabel = true,
@@ -376,6 +382,7 @@ private fun HomeScreen(
             )
             T_CATALOG -> CatalogScreen(data, repo, modifier = m)
             T_SHOPPING -> ShoppingScreen(data, repo, onOpenCatalog = onOpenCatalog, onScan = { startScan() }, modifier = m)
+            T_INFO -> InfoScreen(onCheckUpdate = { checkUpdate() }, modifier = m)
             else -> ColorsScreen(
                 data, repo,
                 basePaintId = colorBasePaintId,
