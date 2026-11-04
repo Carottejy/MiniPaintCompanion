@@ -67,6 +67,7 @@ import com.carottejy.minipaintcompanion.ui.ColorsScreen
 import com.carottejy.minipaintcompanion.ui.ShoppingScreen
 import com.carottejy.minipaintcompanion.ui.UnknownBarcodeSheet
 import com.carottejy.minipaintcompanion.ui.scanBarcode
+import com.carottejy.minipaintcompanion.ui.shortLabel
 import com.carottejy.minipaintcompanion.update.UpdateDialog
 import com.carottejy.minipaintcompanion.update.UpdateInfo
 import com.carottejy.minipaintcompanion.update.Updater
