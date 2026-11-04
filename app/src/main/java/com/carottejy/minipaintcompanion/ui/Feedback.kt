@@ -38,7 +38,7 @@ private const val ISSUES_URL = "https://github.com/Carottejy/MiniPaintCompanion/
 private fun enc(s: String) = URLEncoder.encode(s, "UTF-8").replace("+", "%20")
 
 /**
- * Ouvre le formulaire de ticket GitHub prérempli (modèles .github/ISSUE_TEMPLATE/*.yml) :
+ * Ouvre le formulaire de ticket GitHub prérempli (modèles bug.yml et idea.yml du dossier .github/ISSUE_TEMPLATE) :
  * le ticket arrive dans l'onglet Issues du dépôt, avec l'étiquette bug ou enhancement.
  */
 fun feedbackUrl(context: Context, type: FeedbackType, title: String, description: String, steps: String): String {
