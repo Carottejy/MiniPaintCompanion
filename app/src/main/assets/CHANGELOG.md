@@ -1,4 +1,8 @@
 ## @VERSION@ — @DATE@
+- Correction : prendre une photo (pipette ou projet) faisait planter l'appli quand l'autorisation de l'appareil photo n'avait pas encore été donnée. Elle est maintenant demandée au besoin.
+- Pipette : annuler une photo ne fait plus perdre l'image en cours.
+
+## 1.0.15 — 04/11/2026
 - Nouvel onglet Pipette : ouvre une photo, place le curseur sur une couleur et découvre les pots les plus proches du catalogue (ou de ta collection), à ajouter en un geste à la liste d'achat.
 - Épingle jusqu'à 8 couleurs d'une même image pour composer une palette, puis « Acheter la palette » ajoute les pots manquants.
 - La couleur relevée peut servir de base dans l'onglet Théorie.

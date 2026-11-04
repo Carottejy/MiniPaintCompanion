@@ -199,7 +199,7 @@ fun ProjectEditorScreen(
         update { it.copy(photo = name) }
     }
 
-    val takePicture = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { ok ->
+    val takePicture = rememberTakePicture { ok ->
         val name = pendingPhoto
         if (ok && name != null) replacePhoto(name) else name?.let { File(repo.photosDir, it).delete() }
         pendingPhoto = null
@@ -216,12 +216,7 @@ fun ProjectEditorScreen(
         val file = repo.newPhotoFile()
         pendingPhoto = file.name
         val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
-        try {
-            takePicture.launch(uri)
-        } catch (e: ActivityNotFoundException) {
-            pendingPhoto = null
-            Toast.makeText(context, "Aucune application appareil photo trouvée", Toast.LENGTH_SHORT).show()
-        }
+        takePicture(uri)
     }
 
     fun discard() {

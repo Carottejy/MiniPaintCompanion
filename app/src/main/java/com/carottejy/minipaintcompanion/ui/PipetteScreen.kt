@@ -189,16 +189,21 @@ fun PipetteScreen(
             if (ok) newImage() else Toast.makeText(context, "Impossible d'ouvrir cette image", Toast.LENGTH_SHORT).show()
         }
     }
-    val takePicture = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { ok ->
-        if (ok) newImage()
+    // La photo est prise dans un fichier temporaire : si on annule, l'image en cours reste intacte.
+    val captureFile = remember { File(pipetteFile(context).parentFile, "capture.jpg") }
+    val takePicture = rememberTakePicture { ok ->
+        if (ok && captureFile.exists() && captureFile.length() > 0) {
+            val target = pipetteFile(context)
+            target.delete()
+            if (!captureFile.renameTo(target)) captureFile.copyTo(target, overwrite = true)
+            newImage()
+        } else {
+            captureFile.delete()
+        }
     }
     fun launchCamera() {
-        val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", pipetteFile(context))
-        try {
-            takePicture.launch(uri)
-        } catch (e: ActivityNotFoundException) {
-            Toast.makeText(context, "Aucune application appareil photo trouvée", Toast.LENGTH_SHORT).show()
-        }
+        val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", captureFile)
+        takePicture(uri)
     }
 
     val allPaints = remember(data.customPaints) { repo.allPaints(data) }
