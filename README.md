@@ -20,7 +20,11 @@ Le scanner de Google Play services lit les EAN/UPC. Les pots Vallejo sont reconn
 
 ## Mise à jour automatique
 
-L'APK GitHub interroge `releases/latest` au lancement (au plus toutes les 6 h) et propose d'installer la nouvelle version par-dessus. **L'API GitHub ne répond pas sans authentification sur un dépôt privé** : la mise à jour automatique ne fonctionne que si le dépôt (ou un dépôt de publication dédié) est public.
+L'APK GitHub interroge `releases/latest` au lancement (au plus toutes les heures), télécharge la nouvelle version en arrière-plan et l'installe au lancement suivant via `PackageInstaller` (sans confirmation sur Android 12+ grâce à `UPDATE_PACKAGES_WITHOUT_USER_ACTION` ; l'autorisation « installer des applis inconnues » est demandée une fois). Désactivable dans l'onglet Info. Nécessite un dépôt **public** (l'API ne répond pas sans authentification sur un dépôt privé).
+
+## Bugs et idées
+
+L'onglet Info ouvre le formulaire de ticket GitHub prérempli (modèles `.github/ISSUE_TEMPLATE/bug.yml` et `idea.yml`, étiquettes `bug` / `enhancement`), avec la version et le téléphone.
 
 ## Variantes
 

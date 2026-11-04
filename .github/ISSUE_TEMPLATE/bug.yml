@@ -1,0 +1,26 @@
+name: Signaler un bug
+description: Quelque chose ne fonctionne pas dans MiniPaintCompanion
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Que se passe-t-il ?
+      description: Décris le problème et ce que tu attendais.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Comment le reproduire ?
+      placeholder: "1. Ouvrir l'onglet…  2. Toucher…  3. …"
+  - type: input
+    id: version
+    attributes:
+      label: Version de l'appli
+      placeholder: "1.0.12 (build 12) — visible dans l'onglet Info"
+  - type: input
+    id: device
+    attributes:
+      label: Téléphone et version d'Android

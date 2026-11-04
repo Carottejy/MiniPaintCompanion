@@ -18,6 +18,15 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.SystemUpdate
+import androidx.compose.material.icons.outlined.BugReport
+import androidx.compose.material.icons.outlined.Lightbulb
+import androidx.compose.material3.Switch
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -61,8 +70,11 @@ fun loadReleaseNotes(context: Context): List<ReleaseNote> {
 @Composable
 fun InfoScreen(onCheckUpdate: () -> Unit, modifier: Modifier = Modifier) {
     val context = LocalContext.current
+    val uriHandler = LocalUriHandler.current
     val (versionName, build) = remember { Updater.installedVersion(context) }
     val notes = remember { loadReleaseNotes(context) }
+    var autoUpdate by remember { mutableStateOf(Updater.isAutoEnabled(context)) }
+    var feedback by rememberSaveable { mutableStateOf<String?>(null) }
 
     LazyColumn(modifier, contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 32.dp)) {
         item {
@@ -98,6 +110,23 @@ fun InfoScreen(onCheckUpdate: () -> Unit, modifier: Modifier = Modifier) {
                         Spacer(Modifier.width(8.dp))
                         Text("Rechercher une mise à jour")
                     }
+                    Row(
+                        Modifier.fillMaxWidth().padding(top = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column(Modifier.weight(1f)) {
+                            Text("Mises à jour automatiques", style = MaterialTheme.typography.bodyLarge)
+                            Text(
+                                "Téléchargée en arrière-plan, la nouvelle version s'installe au lancement suivant.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        Switch(checked = autoUpdate, onCheckedChange = {
+                            autoUpdate = it
+                            Updater.setAutoEnabled(context, it)
+                        })
+                    }
                 }
                 Spacer(Modifier.height(12.dp))
                 Text(
@@ -107,6 +136,38 @@ fun InfoScreen(onCheckUpdate: () -> Unit, modifier: Modifier = Modifier) {
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+            }
+            Column(
+                Modifier
+                    .padding(top = 16.dp)
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(MaterialTheme.colorScheme.surfaceContainer)
+                    .padding(20.dp),
+            ) {
+                Text("Bugs et idées", style = MaterialTheme.typography.titleLarge)
+                Text(
+                    "Un souci ou une envie d'évolution ? Ton message arrive directement dans les tickets GitHub du projet.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 4.dp, bottom = 12.dp),
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilledTonalButton(onClick = { feedback = FeedbackType.BUG.name }, modifier = Modifier.weight(1f)) {
+                        Icon(Icons.Outlined.BugReport, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("Un bug")
+                    }
+                    FilledTonalButton(onClick = { feedback = FeedbackType.IDEA.name }, modifier = Modifier.weight(1f)) {
+                        Icon(Icons.Outlined.Lightbulb, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("Une idée")
+                    }
+                }
+                TextButton(
+                    onClick = { uriHandler.openUri("https://github.com/Carottejy/MiniPaintCompanion/issues") },
+                    modifier = Modifier.padding(top = 4.dp),
+                ) { Text("Voir les tickets existants") }
             }
             Text(
                 "Notes de version",
@@ -149,5 +210,9 @@ fun InfoScreen(onCheckUpdate: () -> Unit, modifier: Modifier = Modifier) {
                 }
             }
         }
+    }
+
+    feedback?.let { t ->
+        FeedbackDialog(FeedbackType.valueOf(t), onDismiss = { feedback = null })
     }
 }

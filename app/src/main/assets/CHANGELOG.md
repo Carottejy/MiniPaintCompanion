@@ -1,4 +1,8 @@
 ## @VERSION@ — @DATE@
+- Mise à jour vraiment automatique : la nouvelle version est téléchargée en arrière-plan puis installée d'elle-même au lancement suivant (sans confirmation sur Android 12 et plus). Réglable dans l'onglet Info.
+- Onglet Info : signaler un bug ou proposer une idée ; le message arrive dans les tickets GitHub du projet, avec la version de l'appli et le modèle du téléphone.
+
+## 1.0.11 — 04/11/2026
 - Trois nouvelles techniques pour les étapes : bombe, éponge et stylo, en plus du pinceau et de l'aérographe. Elles sont aussi reconnues à la dictée (« à la bombe », « à l'éponge », « au stylo / feutre »).
 - Nouvel onglet Info : version de l'application, recherche de mise à jour et notes de version.
 

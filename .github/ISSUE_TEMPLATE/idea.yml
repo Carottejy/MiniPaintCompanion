@@ -1,0 +1,16 @@
+name: Proposer une idée
+description: Une évolution ou une nouvelle fonctionnalité pour MiniPaintCompanion
+title: "[Idée] "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Ton idée
+      description: Qu'aimerais-tu pouvoir faire, et pourquoi ?
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version de l'appli

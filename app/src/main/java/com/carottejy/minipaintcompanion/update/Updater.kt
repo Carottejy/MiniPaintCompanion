@@ -1,7 +1,9 @@
 package com.carottejy.minipaintcompanion.update
 
 import android.content.Context
+import android.app.PendingIntent
 import android.content.Intent
+import android.content.pm.PackageInstaller
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
@@ -37,7 +39,8 @@ object Updater {
     private const val PREFS = "updater"
     private const val KEY_LAST_CHECK = "last_check"
     private const val KEY_IGNORED = "ignored"
-    private const val AUTO_INTERVAL_MS = 6 * 60 * 60 * 1000L
+    private const val KEY_AUTO = "auto_install"
+    private const val AUTO_INTERVAL_MS = 60 * 60 * 1000L
 
     val enabled: Boolean get() = BuildConfig.SELF_UPDATE
 
@@ -92,6 +95,59 @@ object Updater {
         )
     }
 
+    /** Mise à jour automatique (téléchargement en arrière-plan + installation au lancement suivant). */
+    fun isAutoEnabled(context: Context): Boolean =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(KEY_AUTO, true)
+
+    fun setAutoEnabled(context: Context, enabled: Boolean) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean(KEY_AUTO, enabled).apply()
+    }
+
+    private fun updatesDir(context: Context) = File(context.cacheDir, "updates").apply { mkdirs() }
+
+    /** APK déjà téléchargé et plus récent que la version installée, prêt à installer. */
+    fun pendingApk(context: Context): Pair<File, Long>? {
+        val installed = installedVersion(context).second
+        var best: Pair<File, Long>? = null
+        updatesDir(context).listFiles()?.forEach { f ->
+            val build = Regex("""MiniPaintCompanion-(\d+)\.apk""").matchEntire(f.name)?.groupValues?.get(1)?.toLongOrNull()
+            when {
+                build == null || build <= installed -> f.delete()
+                best == null || build > best!!.second -> best = f to build
+            }
+        }
+        return best
+    }
+
+    /**
+     * Installe l'APK via PackageInstaller. Sur Android 12+, une appli qui se met à jour elle-même
+     * peut le faire sans confirmation (USER_ACTION_NOT_REQUIRED) ; sinon Android affiche sa fenêtre.
+     */
+    fun installSilently(context: Context, apk: File) {
+        val installer = context.packageManager.packageInstaller
+        val params = PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL).apply {
+            setAppPackageName(context.packageName)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                setRequireUserAction(PackageInstaller.SessionParams.USER_ACTION_NOT_REQUIRED)
+            }
+        }
+        val sessionId = installer.createSession(params)
+        installer.openSession(sessionId).use { session ->
+            session.openWrite("base.apk", 0, apk.length()).use { out ->
+                apk.inputStream().use { it.copyTo(out) }
+                session.fsync(out)
+            }
+            val flags = PendingIntent.FLAG_UPDATE_CURRENT or
+                (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) PendingIntent.FLAG_MUTABLE else 0)
+            val pending = PendingIntent.getBroadcast(
+                context, sessionId,
+                Intent(context, InstallResultReceiver::class.java).setPackage(context.packageName),
+                flags,
+            )
+            session.commit(pending.intentSender)
+        }
+    }
+
     fun ignore(context: Context, version: String) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(KEY_IGNORED, version).apply()
     }
@@ -108,9 +164,10 @@ object Updater {
     /** Télécharge l'APK (en suivant les redirections GitHub) en signalant la progression en %. */
     suspend fun download(context: Context, info: UpdateInfo, onProgress: (Int) -> Unit): File =
         withContext(Dispatchers.IO) {
-            val dir = File(context.cacheDir, "updates").apply { mkdirs() }
-            dir.listFiles()?.forEach { it.delete() }
-            val apk = File(dir, "MiniPaintCompanion-update.apk")
+            val dir = updatesDir(context)
+            val apk = File(dir, "MiniPaintCompanion-${info.build}.apk")
+            if (apk.exists() && info.size > 0 && apk.length() == info.size) return@withContext apk
+            val part = File(dir, "download.part")
 
             var current = info.url
             var conn: HttpURLConnection? = null
@@ -142,7 +199,7 @@ object Updater {
                 var received = 0L
                 var last = -1
                 c.inputStream.use { input ->
-                    apk.outputStream().use { out ->
+                    part.outputStream().use { out ->
                         val buf = ByteArray(16 * 1024)
                         while (true) {
                             val n = input.read(buf)
@@ -162,6 +219,8 @@ object Updater {
             } finally {
                 conn?.disconnect()
             }
+            apk.delete()
+            if (!part.renameTo(apk)) throw IllegalStateException("enregistrement impossible")
             apk
         }
 

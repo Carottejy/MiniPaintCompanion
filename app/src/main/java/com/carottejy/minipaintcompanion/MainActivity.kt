@@ -27,6 +27,9 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import android.widget.Toast
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.Dispatchers
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -112,11 +115,51 @@ fun App(repo: Repository) {
     val context = LocalContext.current
     var update by remember { mutableStateOf<UpdateInfo?>(null) }
 
-    // Vérification discrète au lancement (APK GitHub uniquement, au plus toutes les 6 h).
+    var installing by remember { mutableStateOf<String?>(null) }
+
+    // Mise à jour automatique (APK GitHub) :
+    //  1. une version déjà téléchargée est installée dès le lancement, avant toute saisie ;
+    //  2. sinon on interroge GitHub (au plus toutes les heures) et on télécharge en arrière-plan,
+    //     pour une installation au lancement suivant.
     LaunchedEffect(Unit) {
-        if (Updater.enabled) update = runCatching { Updater.check(context, auto = true) }.getOrNull()
+        if (!Updater.enabled) return@LaunchedEffect
+        val auto = Updater.isAutoEnabled(context)
+        val pending = Updater.pendingApk(context)
+        if (auto && pending != null && Updater.canInstall(context)) {
+            installing = "1.0.${pending.second}"
+            delay(1500)
+            runCatching { withContext(Dispatchers.IO) { Updater.installSilently(context, pending.first) } }
+                .onFailure {
+                    installing = null
+                    Toast.makeText(context, "Mise à jour impossible : ${it.message}", Toast.LENGTH_LONG).show()
+                }
+            return@LaunchedEffect
+        }
+        val info = runCatching { Updater.check(context, auto = true) }.getOrNull() ?: return@LaunchedEffect
+        if (auto && Updater.canInstall(context)) {
+            runCatching { Updater.download(context, info) {} }
+                .onSuccess {
+                    Toast.makeText(
+                        context,
+                        "Mise à jour ${info.version} téléchargée : elle s'installera au prochain lancement.",
+                        Toast.LENGTH_LONG,
+                    ).show()
+                }
+                .onFailure { update = info }
+        } else {
+            // Autorisation d'installer pas encore donnée, ou mode automatique coupé : on demande.
+            update = info
+        }
     }
     update?.let { UpdateDialog(it, onDismiss = { update = null }) }
+    installing?.let { v ->
+        AlertDialog(
+            onDismissRequest = {},
+            title = { Text("Mise à jour vers $v") },
+            text = { Text("Installation en cours… L'appli va se fermer : rouvre-la dans quelques secondes.") },
+            confirmButton = {},
+        )
+    }
 
     NavHost(
         navController = nav,
