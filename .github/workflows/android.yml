@@ -37,7 +37,7 @@ jobs:
       - name: Erreurs de compilation (annotations)
         if: failure()
         run: |
-          grep -E "^e: |error:|What went wrong|Could not|Execution failed|> " build.log | head -40 | while IFS= read -r line; do
+          grep -v "^> Task" build.log | grep -E -A12 "^e: |What went wrong" | grep -v "^\s*$" | head -50 | while IFS= read -r line; do
             echo "::error::${line}"
           done
 
