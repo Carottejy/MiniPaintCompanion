@@ -26,33 +26,73 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.carottejy.minipaintcompanion.update.Updater
-import java.net.URLEncoder
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.intOrNull
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.put
+import java.net.HttpURLConnection
+import java.net.URL
 
 enum class FeedbackType(val label: String, val template: String, val titlePrefix: String) {
     BUG("Signaler un bug", "bug.yml", "[Bug] "),
     IDEA("Proposer une idée", "idea.yml", "[Idée] "),
 }
 
-private const val ISSUES_URL = "https://github.com/Carottejy/MiniPaintCompanion/issues/new"
+/** Relais Supabase qui crée le ticket GitHub avec un jeton gardé côté serveur. */
+private const val FEEDBACK_URL = "https://qqrmozqxzeicbxwauiqt.supabase.co/functions/v1/minipaint-feedback"
+private const val FEEDBACK_KEY = "sb_publishable_doGPithS7QQzmp0up3bRLw_zeg2jnDw"
+const val ISSUES_PAGE = "https://github.com/Carottejy/MiniPaintCompanion/issues"
 
-private fun enc(s: String) = URLEncoder.encode(s, "UTF-8").replace("+", "%20")
+fun deviceDescription() = "${Build.MANUFACTURER} ${Build.MODEL} · Android ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})"
 
-/**
- * Ouvre le formulaire de ticket GitHub prérempli (modèles bug.yml et idea.yml du dossier .github/ISSUE_TEMPLATE) :
- * le ticket arrive dans l'onglet Issues du dépôt, avec l'étiquette bug ou enhancement.
- */
-fun feedbackUrl(context: Context, type: FeedbackType, title: String, description: String, steps: String): String {
+/** Envoie le retour ; renvoie le numéro du ticket créé. Aucun compte GitHub nécessaire. */
+suspend fun sendFeedback(
+    context: Context,
+    type: FeedbackType,
+    title: String,
+    description: String,
+    steps: String,
+    author: String,
+): Int = withContext(Dispatchers.IO) {
     val (version, build) = Updater.installedVersion(context)
-    val device = "${Build.MANUFACTURER} ${Build.MODEL} · Android ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})"
-    val params = buildList {
-        add("template=${type.template}")
-        add("title=" + enc(type.titlePrefix + title.trim()))
-        add("description=" + enc(description.trim()))
-        if (type == FeedbackType.BUG && steps.isNotBlank()) add("steps=" + enc(steps.trim()))
-        add("version=" + enc("$version (build $build)"))
-        if (type == FeedbackType.BUG) add("device=" + enc(device))
+    val payload = buildJsonObject {
+        put("type", if (type == FeedbackType.BUG) "bug" else "idea")
+        put("title", title.trim())
+        put("description", description.trim())
+        put("steps", steps.trim())
+        put("version", "$version (build $build)")
+        if (type == FeedbackType.BUG) put("device", deviceDescription())
+        put("author", author.trim())
+    }.toString()
+    val conn = (URL(FEEDBACK_URL).openConnection() as HttpURLConnection).apply {
+        requestMethod = "POST"
+        doOutput = true
+        connectTimeout = 15000
+        readTimeout = 20000
+        setRequestProperty("Content-Type", "application/json")
+        setRequestProperty("x-app", "MiniPaintCompanion")
+        setRequestProperty("apikey", FEEDBACK_KEY)
     }
-    return "$ISSUES_URL?" + params.joinToString("&")
+    try {
+        conn.outputStream.use { it.write(payload.toByteArray()) }
+        val code = conn.responseCode
+        val body = (if (code in 200..299) conn.inputStream else conn.errorStream)?.bufferedReader()?.use { it.readText() }.orEmpty()
+        val obj = runCatching { Json.parseToJsonElement(body).jsonObject }.getOrNull()
+        if (code !in 200..299) {
+            throw IllegalStateException(obj?.get("error")?.jsonPrimitive?.content ?: "erreur $code")
+        }
+        obj?.get("number")?.jsonPrimitive?.intOrNull ?: 0
+    } finally {
+        conn.disconnect()
+    }
 }
 
 @Composable
@@ -61,10 +101,29 @@ fun FeedbackDialog(type: FeedbackType, onDismiss: () -> Unit) {
     var title by rememberSaveable { mutableStateOf("") }
     var description by rememberSaveable { mutableStateOf("") }
     var steps by rememberSaveable { mutableStateOf("") }
-    val valid = title.isNotBlank() && description.isNotBlank()
+    var author by rememberSaveable { mutableStateOf("") }
+    var sending by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
+    val scope = rememberCoroutineScope()
+    val valid = title.trim().length >= 3 && description.trim().length >= 5
+
+    fun copy() {
+        val (version, build) = Updater.installedVersion(context)
+        val text = buildString {
+            appendLine(type.titlePrefix + title.trim())
+            appendLine()
+            appendLine(description.trim())
+            if (steps.isNotBlank()) { appendLine(); appendLine("Pour reproduire : ${steps.trim()}") }
+            appendLine()
+            appendLine("Version $version (build $build) · ${deviceDescription()}")
+        }
+        val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        cm.setPrimaryClip(ClipData.newPlainText("Retour MiniPaintCompanion", text))
+        Toast.makeText(context, "Texte copié : colle-le où tu veux (message, mail…)", Toast.LENGTH_LONG).show()
+    }
 
     AlertDialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = { if (!sending) onDismiss() },
         title = { Text(type.label) },
         text = {
             Column(
@@ -94,41 +153,46 @@ fun FeedbackDialog(type: FeedbackType, onDismiss: () -> Unit) {
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }
+                OutlinedTextField(
+                    author, { author = it },
+                    label = { Text("Pseudo (optionnel)") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
                 Text(
-                    "La version de l'appli" + (if (type == FeedbackType.BUG) " et le modèle du téléphone sont ajoutés" else " est ajoutée") +
-                        " automatiquement. Le formulaire GitHub s'ouvre prérempli : il ne reste qu'à valider " +
-                        "(un compte GitHub gratuit est nécessaire).",
+                    "Pas besoin de compte : ton message devient un ticket public sur la page GitHub du projet. " +
+                        "La version de l'appli" + (if (type == FeedbackType.BUG) " et le modèle du téléphone sont ajoutés" else " est ajoutée") +
+                        ". N'y mets pas d'informations personnelles.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                if (sending) LinearProgressIndicator(Modifier.fillMaxWidth())
+                error?.let {
+                    Text(
+                        "Envoi impossible : $it Tu peux copier le texte et l'envoyer autrement.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
             }
         },
         confirmButton = {
-            TextButton(enabled = valid, onClick = {
-                val url = feedbackUrl(context, type, title, description, steps)
-                try {
-                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
-                    onDismiss()
-                } catch (e: Exception) {
-                    Toast.makeText(context, "Aucun navigateur trouvé", Toast.LENGTH_LONG).show()
+            TextButton(enabled = valid && !sending, onClick = {
+                sending = true
+                error = null
+                scope.launch {
+                    runCatching { sendFeedback(context, type, title, description, steps, author) }
+                        .onSuccess { n ->
+                            Toast.makeText(context, "Merci ! Ton message est enregistré (ticket n° $n).", Toast.LENGTH_LONG).show()
+                            onDismiss()
+                        }
+                        .onFailure { error = it.message ?: "erreur réseau." }
+                    sending = false
                 }
-            }) { Text("Envoyer sur GitHub") }
+            }) { Text(if (sending) "Envoi…" else "Envoyer") }
         },
         dismissButton = {
-            TextButton(enabled = valid, onClick = {
-                val (version, build) = Updater.installedVersion(context)
-                val text = buildString {
-                    appendLine(type.titlePrefix + title.trim())
-                    appendLine()
-                    appendLine(description.trim())
-                    if (steps.isNotBlank()) { appendLine(); appendLine("Pour reproduire : ${steps.trim()}") }
-                    appendLine()
-                    appendLine("Version $version (build $build) · ${Build.MANUFACTURER} ${Build.MODEL} · Android ${Build.VERSION.RELEASE}")
-                }
-                val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                cm.setPrimaryClip(ClipData.newPlainText("Retour MiniPaintCompanion", text))
-                Toast.makeText(context, "Texte copié : colle-le où tu veux (message, mail…)", Toast.LENGTH_LONG).show()
-            }) { Text("Copier") }
+            TextButton(enabled = valid && !sending, onClick = ::copy) { Text("Copier") }
         },
     )
 }

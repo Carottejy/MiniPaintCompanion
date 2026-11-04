@@ -147,7 +147,7 @@ fun InfoScreen(onCheckUpdate: () -> Unit, modifier: Modifier = Modifier) {
             ) {
                 Text("Bugs et idées", style = MaterialTheme.typography.titleLarge)
                 Text(
-                    "Un souci ou une envie d'évolution ? Ton message arrive directement dans les tickets GitHub du projet.",
+                    "Un souci ou une envie d'évolution ? Écris-le ici, sans compte : ton message arrive directement dans les tickets du projet.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 4.dp, bottom = 12.dp),
@@ -165,7 +165,7 @@ fun InfoScreen(onCheckUpdate: () -> Unit, modifier: Modifier = Modifier) {
                     }
                 }
                 TextButton(
-                    onClick = { uriHandler.openUri("https://github.com/Carottejy/MiniPaintCompanion/issues") },
+                    onClick = { uriHandler.openUri(ISSUES_PAGE) },
                     modifier = Modifier.padding(top = 4.dp),
                 ) { Text("Voir les tickets existants") }
             }

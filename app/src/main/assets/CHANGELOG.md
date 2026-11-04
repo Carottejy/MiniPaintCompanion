@@ -1,4 +1,8 @@
 ## @VERSION@ — @DATE@
+- Dictée continue : l'écoute ne s'arrête plus au premier silence. Parle à ton rythme, fais des pauses, corrige le texte si besoin, puis touche « Terminé ».
+- Bugs et idées : plus besoin de compte GitHub, le message est envoyé directement depuis l'appli.
+
+## 1.0.13 — 04/11/2026
 - Mise à jour vraiment automatique : la nouvelle version est téléchargée en arrière-plan puis installée d'elle-même au lancement suivant (sans confirmation sur Android 12 et plus). Réglable dans l'onglet Info.
 - Onglet Info : signaler un bug ou proposer une idée ; le message arrive dans les tickets GitHub du projet, avec la version de l'appli et le modèle du téléphone.
 

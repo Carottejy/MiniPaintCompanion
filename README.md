@@ -24,7 +24,7 @@ L'APK GitHub interroge `releases/latest` au lancement (au plus toutes les heures
 
 ## Bugs et idées
 
-L'onglet Info ouvre le formulaire de ticket GitHub prérempli (modèles `.github/ISSUE_TEMPLATE/bug.yml` et `idea.yml`, étiquettes `bug` / `enhancement`), avec la version et le téléphone.
+L'onglet Info envoie les retours sans compte GitHub : l'appli poste vers la fonction Supabase `minipaint-feedback` (projet NoobHammer40k), qui crée le ticket avec un jeton GitHub gardé côté serveur (secret `GITHUB_TOKEN`, jeton « fine-grained » limité à ce dépôt avec la permission *Issues : lecture et écriture*). Étiquettes `bug` / `enhancement`, limite de 5 envois / 10 min par adresse. Les modèles `.github/ISSUE_TEMPLATE` servent à ceux qui passent par GitHub directement.
 
 ## Variantes
 

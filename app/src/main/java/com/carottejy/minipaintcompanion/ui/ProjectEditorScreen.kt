@@ -124,16 +124,15 @@ fun ProjectEditorScreen(
 
     // ---------------------------------------------------------------- dictée vocale
     // Cible : identifiant d'une étape à compléter, ou NEW_STEPS pour créer de nouvelles étapes.
-    var voiceTarget by rememberSaveable { mutableStateOf<String?>(null) }
-    val speech = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        val target = voiceTarget
-        voiceTarget = null
-        val text = result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)?.firstOrNull()
-        if (result.resultCode != Activity.RESULT_OK || text.isNullOrBlank() || target == null) return@rememberLauncherForActivityResult
+    var voiceTarget by rememberSaveable { mutableStateOf<String?>(null) }   // dictée intégrée ouverte
+    var fallbackTarget by rememberSaveable { mutableStateOf<String?>(null) } // dictée Google (secours)
+
+    fun applyVoice(target: String, text: String) {
+        if (text.isBlank()) return
         val parsed = VoiceParser.parse(text, repo.allPaints(data), data.ownedPaintIds)
         if (parsed.isEmpty()) {
             Toast.makeText(context, "Je n'ai rien compris d'utile dans « $text »", Toast.LENGTH_LONG).show()
-            return@rememberLauncherForActivityResult
+            return
         }
         val nbPaints = parsed.sumOf { it.paintIds.size }
         if (target == NEW_STEPS) {
@@ -144,48 +143,53 @@ fun ProjectEditorScreen(
                     last = t
                     newStep().copy(title = ps.title, technique = t, paintIds = ps.paintIds, notes = ps.notes)
                 }
-                // Une étape vide en fin de liste (ex. « Sous-couche » par défaut, sans pot) est remplacée.
+                // L'étape « Sous-couche » vide créée par défaut est remplacée par la dictée.
                 val base = p.steps.toMutableList()
                 val tail = base.lastOrNull()
-                if (tail != null && tail.paintIds.isEmpty() && tail.notes.isBlank() && base.size == 1 && p.steps.size == 1 && added.first().title.isNotBlank()) {
+                if (base.size == 1 && tail != null && tail.paintIds.isEmpty() && tail.notes.isBlank() && added.first().title.isNotBlank()) {
                     base.removeAt(base.lastIndex)
                 }
                 p.copy(steps = base + added)
             }
             Toast.makeText(
                 context,
-                "« $text »\n${parsed.size} étape${if (parsed.size > 1) "s" else ""} ajoutée${if (parsed.size > 1) "s" else ""}, $nbPaints pot${if (nbPaints > 1) "s" else ""} reconnu${if (nbPaints > 1) "s" else ""}. Vérifie avant d'enregistrer.",
+                "${parsed.size} étape${if (parsed.size > 1) "s" else ""} ajoutée${if (parsed.size > 1) "s" else ""}, $nbPaints pot${if (nbPaints > 1) "s" else ""} reconnu${if (nbPaints > 1) "s" else ""}. Vérifie avant d'enregistrer.",
                 Toast.LENGTH_LONG,
             ).show()
         } else {
             updateStep(target) { st -> parsed.fold(st) { acc, ps -> VoiceParser.merge(acc, ps) } }
-            Toast.makeText(context, "« $text »\n$nbPaints pot${if (nbPaints > 1) "s" else ""} reconnu${if (nbPaints > 1) "s" else ""}", Toast.LENGTH_LONG).show()
+            Toast.makeText(context, "$nbPaints pot${if (nbPaints > 1) "s" else ""} reconnu${if (nbPaints > 1) "s" else ""}", Toast.LENGTH_LONG).show()
         }
     }
 
-    fun dictate(target: String) {
+    val ownedNames = remember(data) { repo.allPaints(data).filter { it.id in data.ownedPaintIds }.map { it.name }.distinct() }
+
+    // Secours : fenêtre de dictée de Google, si la reconnaissance intégrée n'est pas disponible.
+    val speech = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        val target = fallbackTarget
+        fallbackTarget = null
+        val text = result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)?.firstOrNull()
+        if (result.resultCode == Activity.RESULT_OK && !text.isNullOrBlank() && target != null) applyVoice(target, text)
+    }
+
+    fun googleDictation(target: String) {
         val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
             putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
             putExtra(RecognizerIntent.EXTRA_LANGUAGE, "fr-FR")
-            putExtra(
-                RecognizerIntent.EXTRA_PROMPT,
-                if (target == NEW_STEPS) "Ex. : « Aplats au pinceau avec Macragge Blue, dilué 1 pour 1, ensuite lavis avec Nuln Oil »"
-                else "Dis la technique, les pots et tes notes",
-            )
-            // Aide la reconnaissance à comprendre les noms (anglais) des pots de ta collection.
-            if (Build.VERSION.SDK_INT >= 33) {
-                val names = repo.allPaints(data).filter { it.id in data.ownedPaintIds }.map { it.name }.distinct().take(300)
-                putStringArrayListExtra("android.speech.extra.BIASING_STRINGS", ArrayList(names))
-            }
+            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 4000L)
+            if (Build.VERSION.SDK_INT >= 33) putStringArrayListExtra("android.speech.extra.BIASING_STRINGS", ArrayList(ownedNames.take(300)))
         }
-        voiceTarget = target
+        fallbackTarget = target
         try {
             speech.launch(intent)
         } catch (e: ActivityNotFoundException) {
-            voiceTarget = null
+            fallbackTarget = null
             Toast.makeText(context, "Aucune reconnaissance vocale disponible sur ce téléphone (installe ou active l'appli Google).", Toast.LENGTH_LONG).show()
         }
     }
+
+    fun dictate(target: String) { voiceTarget = target }
+
     val dirty = draftJson != originalJson
 
     fun replacePhoto(name: String) {
@@ -394,6 +398,17 @@ fun ProjectEditorScreen(
                 modifier = Modifier.fillMaxSize(),
             )
         }
+    }
+
+    voiceTarget?.let { target ->
+        DictationDialog(
+            hint = if (target == NEW_STEPS) "Ex. : aplats au pinceau avec Macragge Blue, dilué 1 pour 1, ensuite lavis avec Nuln Oil"
+            else "Dis la technique, les pots et tes notes",
+            biasing = ownedNames,
+            onDone = { text -> voiceTarget = null; applyVoice(target, text) },
+            onDismiss = { voiceTarget = null },
+            onFallback = { voiceTarget = null; googleDictation(target) },
+        )
     }
 
     if (confirmDiscard) {
