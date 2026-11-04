@@ -67,7 +67,7 @@ fun UpdateDialog(info: UpdateInfo, onDismiss: () -> Unit) {
                 when (val p = phase) {
                     Phase.Offer -> {
                         val mo = if (info.size > 0) " (%.1f Mo)".format(info.size / 1_048_576.0) else ""
-                        Text("Une nouvelle version de MiniPaintCompanion est prête$mo. Tes réalisations et ta collection sont conservées.")
+                        Text("Une nouvelle version de MiniPaintCompanion est prête$mo. Tes projets et tes peintures sont conservés.")
                         if (info.notes.isNotBlank()) {
                             Spacer(Modifier.height(12.dp))
                             Text(

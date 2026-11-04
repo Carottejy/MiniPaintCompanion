@@ -45,7 +45,7 @@ fun ProjectsScreen(
     if (data.projects.isEmpty()) {
         EmptyState(
             Icons.Outlined.AutoAwesome,
-            "Aucune réalisation",
+            "Aucun projet",
             "Photographie ta figurine terminée et note chaque étape : sous-couche, aplats, lavis, éclaircissements…",
             modifier,
         )
@@ -61,7 +61,7 @@ fun ProjectsScreen(
         item(span = { GridItemSpan(maxLineSpan) }) {
             val paintsUsed = data.projects.flatMap { p -> p.steps.flatMap { it.paintIds } }.distinct().size
             Text(
-                "${data.projects.size} réalisation${if (data.projects.size > 1) "s" else ""} · $paintsUsed pots utilisés",
+                "${data.projects.size} projet${if (data.projects.size > 1) "s" else ""} · $paintsUsed pots utilisés",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(bottom = 4.dp),

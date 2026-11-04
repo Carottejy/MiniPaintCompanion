@@ -76,7 +76,7 @@ private const val SEGMENTS = 12
 private val RINGS = listOf(0.45f to 1f, 0.85f to 0.9f, 0.85f to 0.5f)
 
 /**
- * Onglet « Couleurs » : roue chromatique, harmonies, et pour chaque couleur
+ * Onglet « Théorie » : roue chromatique, harmonies, et pour chaque couleur
  * les pots du catalogue (ou de ta collection) qui s'en rapprochent le plus.
  */
 @OptIn(ExperimentalMaterial3Api::class)

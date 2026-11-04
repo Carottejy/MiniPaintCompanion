@@ -164,7 +164,7 @@ fun ProjectEditorScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(if (projectId == null) "Nouvelle réalisation" else "Modifier") },
+                title = { Text(if (projectId == null) "Nouveau projet" else "Modifier") },
                 navigationIcon = {
                     IconButton(onClick = { if (dirty) confirmDiscard = true else onDone(null) }) {
                         Icon(Icons.Default.Close, contentDescription = "Fermer")

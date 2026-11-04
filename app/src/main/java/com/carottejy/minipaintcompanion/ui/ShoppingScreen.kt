@@ -34,7 +34,7 @@ import com.carottejy.minipaintcompanion.data.AppData
 import com.carottejy.minipaintcompanion.data.Brand
 import com.carottejy.minipaintcompanion.data.Repository
 
-/** Onglet « Achats » : les pots à acheter ou à racheter. */
+/** Onglet « Achat » : les pots à acheter ou à racheter. */
 @Composable
 fun ShoppingScreen(
     data: AppData,
@@ -54,7 +54,7 @@ fun ShoppingScreen(
             EmptyState(
                 Icons.Outlined.ShoppingCart,
                 "Rien à acheter",
-                "Ajoute des pots depuis le catalogue, ta collection (pot vide à racheter), une réalisation ou l'onglet Couleurs.",
+                "Ajoute des pots depuis le catalogue, ta collection (pot vide à racheter), un projet ou l'onglet Théorie.",
                 Modifier.weight(1f),
             )
             Button(onClick = onOpenCatalog, modifier = Modifier.padding(bottom = 120.dp)) { Text("Ouvrir le catalogue") }

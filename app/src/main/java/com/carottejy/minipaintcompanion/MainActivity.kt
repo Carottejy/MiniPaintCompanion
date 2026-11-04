@@ -49,6 +49,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -126,7 +127,6 @@ fun App(repo: Repository) {
                 repo = repo,
                 onOpenProject = { nav.navigate("project/$it") },
                 onNewProject = { nav.navigate("edit/new") },
-                onOpenCatalog = { nav.navigate("catalog") },
                 onUpdateFound = { update = it },
             )
         }
@@ -156,20 +156,24 @@ fun App(repo: Repository) {
                 },
             )
         }
-        composable("catalog") {
-            CatalogScreen(data = data, repo = repo, onBack = { nav.back() })
-        }
     }
 }
 
 private data class Tab(val title: String, val label: String)
 
 private val TABS = listOf(
-    Tab("Mes réalisations", "Réalisations"),
-    Tab("Ma collection", "Collection"),
-    Tab("Liste d'achat", "Achats"),
-    Tab("Couleurs", "Couleurs"),
+    Tab("Mes projets", "Mes projets"),
+    Tab("Mes peintures", "Mes peintures"),
+    Tab("Catalogue", "Catalogue"),
+    Tab("Liste d'achat", "Achat"),
+    Tab("Théorie des couleurs", "Théorie"),
 )
+
+private const val T_PROJECTS = 0
+private const val T_PAINTS = 1
+private const val T_CATALOG = 2
+private const val T_SHOPPING = 3
+private const val T_THEORY = 4
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -178,7 +182,6 @@ private fun HomeScreen(
     repo: Repository,
     onOpenProject: (String) -> Unit,
     onNewProject: () -> Unit,
-    onOpenCatalog: () -> Unit,
     onUpdateFound: (UpdateInfo) -> Unit,
 ) {
     var tab by rememberSaveable { mutableIntStateOf(0) }
@@ -190,6 +193,7 @@ private fun HomeScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val snackbar = remember { SnackbarHostState() }
+    val onOpenCatalog = { tab = T_CATALOG }
 
     fun toast(msg: String) = Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
 
@@ -231,7 +235,7 @@ private fun HomeScreen(
     val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
         if (uri != null) scope.launch {
             val msg = runCatching { repo.exportBackup(uri) }.fold(
-                { n -> "Sauvegarde créée ($n réalisation${if (n > 1) "s" else ""})" },
+                { n -> "Sauvegarde créée ($n projet${if (n > 1) "s" else ""})" },
                 { e -> "Échec de la sauvegarde : ${e.message}" },
             )
             toast(msg)
@@ -240,7 +244,7 @@ private fun HomeScreen(
     val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) scope.launch {
             val msg = runCatching { repo.importBackup(uri) }.fold(
-                { n -> "Sauvegarde restaurée ($n réalisation${if (n > 1) "s" else ""})" },
+                { n -> "Sauvegarde restaurée ($n projet${if (n > 1) "s" else ""})" },
                 { e -> "Échec de la restauration : ${e.message}" },
             )
             toast(msg)
@@ -262,12 +266,12 @@ private fun HomeScreen(
                     }
                 },
                 actions = {
-                    if (tab == 1 || tab == 2) {
+                    if (tab == T_PAINTS || tab == T_CATALOG || tab == T_SHOPPING) {
                         IconButton(onClick = { startScan() }) {
                             Icon(Icons.Outlined.QrCodeScanner, contentDescription = "Scanner le code-barres d'un pot")
                         }
                     }
-                    if (tab == 1) {
+                    if (tab == T_PAINTS || tab == T_CATALOG) {
                         IconButton(onClick = { showCustom = true }) {
                             Icon(Icons.Outlined.LibraryAdd, contentDescription = "Ajouter un pot perso")
                         }
@@ -329,12 +333,13 @@ private fun HomeScreen(
                         onClick = { tab = i },
                         icon = {
                             val icon = when (i) {
-                                0 -> Icons.Outlined.AutoAwesome
-                                1 -> Icons.Outlined.Inventory2
-                                2 -> Icons.Outlined.ShoppingCart
+                                T_PROJECTS -> Icons.Outlined.AutoAwesome
+                                T_PAINTS -> Icons.Outlined.Inventory2
+                                T_CATALOG -> Icons.Outlined.MenuBook
+                                T_SHOPPING -> Icons.Outlined.ShoppingCart
                                 else -> Icons.Outlined.Palette
                             }
-                            if (i == 2 && data.toBuyIds.isNotEmpty()) {
+                            if (i == T_SHOPPING && data.toBuyIds.isNotEmpty()) {
                                 BadgedBox(badge = { Badge { Text("${data.toBuyIds.size}") } }) {
                                     Icon(icon, contentDescription = null)
                                 }
@@ -342,38 +347,41 @@ private fun HomeScreen(
                                 Icon(icon, contentDescription = null)
                             }
                         },
-                        label = { Text(t.label) },
+                        label = {
+                            Text(
+                                t.label,
+                                maxLines = 1,
+                                softWrap = false,
+                                style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 0.sp, fontSize = 11.sp),
+                            )
+                        },
+                        alwaysShowLabel = true,
                     )
                 }
             }
         },
         floatingActionButton = {
-            when {
-                tab == 0 -> ExtendedFloatingActionButton(
+            if (tab == T_PROJECTS) {
+                ExtendedFloatingActionButton(
                     onClick = onNewProject,
                     icon = { Icon(Icons.Default.Add, contentDescription = null) },
-                    text = { Text("Nouvelle") },
+                    text = { Text("Nouveau projet") },
                 )
-                (tab == 1 && data.ownedPaintIds.isNotEmpty()) || (tab == 2 && data.toBuyIds.isNotEmpty()) ->
-                    ExtendedFloatingActionButton(
-                        onClick = onOpenCatalog,
-                        icon = { Icon(Icons.Outlined.MenuBook, contentDescription = null) },
-                        text = { Text("Catalogue") },
-                    )
             }
         },
     ) { padding ->
         val m = Modifier.fillMaxSize().padding(padding)
         when (tab) {
-            0 -> ProjectsScreen(data, repo, onOpen = { onOpenProject(it.id) }, modifier = m)
-            1 -> CollectionScreen(
+            T_PROJECTS -> ProjectsScreen(data, repo, onOpen = { onOpenProject(it.id) }, modifier = m)
+            T_PAINTS -> CollectionScreen(
                 data, repo,
                 onOpenCatalog = onOpenCatalog,
                 onScan = { startScan() },
-                onHarmonies = { p -> colorBasePaintId = p.id; tab = 3 },
+                onHarmonies = { p -> colorBasePaintId = p.id; tab = T_THEORY },
                 modifier = m,
             )
-            2 -> ShoppingScreen(data, repo, onOpenCatalog = onOpenCatalog, onScan = { startScan() }, modifier = m)
+            T_CATALOG -> CatalogScreen(data, repo, modifier = m)
+            T_SHOPPING -> ShoppingScreen(data, repo, onOpenCatalog = onOpenCatalog, onScan = { startScan() }, modifier = m)
             else -> ColorsScreen(
                 data, repo,
                 basePaintId = colorBasePaintId,
@@ -401,7 +409,7 @@ private fun HomeScreen(
             title = { Text("Restaurer une sauvegarde ?") },
             text = {
                 Text(
-                    "Tes réalisations, ta collection, ta liste d'achat et tes pots perso actuels seront remplacés " +
+                    "Tes projets, tes peintures, ta liste d'achat et tes pots perso actuels seront remplacés " +
                         "par le contenu du fichier .zip choisi."
                 )
             },

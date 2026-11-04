@@ -57,7 +57,7 @@ import com.carottejy.minipaintcompanion.data.Brand
 import com.carottejy.minipaintcompanion.data.Paint
 import com.carottejy.minipaintcompanion.data.Repository
 
-/** Onglet « Ma collection » : les pots que je possède. */
+/** Onglet « Mes peintures » : les pots que je possède. */
 @Composable
 fun CollectionScreen(
     data: AppData,
@@ -79,7 +79,7 @@ fun CollectionScreen(
         Column(modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
             EmptyState(
                 Icons.Outlined.Inventory2,
-                "Ta collection est vide",
+                "Aucune peinture pour l'instant",
                 "Parcours les catalogues Citadel, Vallejo, Army Painter et Prince August et coche les pots que tu as sur ton étagère.",
                 Modifier.weight(1f),
             )
@@ -123,7 +123,7 @@ fun CollectionScreen(
                 val n = usage[p.id]?.size ?: 0
                 if (n > 0) {
                     Text(
-                        "$n réal.",
+                        "$n proj.",
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.padding(start = 8.dp),
@@ -152,7 +152,7 @@ fun CollectionScreen(
                 Column {
                     Text("${p.brand.label} · ${p.range}", color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(Modifier.height(12.dp))
-                    if (used.isEmpty()) Text("Pas encore utilisé dans une réalisation.")
+                    if (used.isEmpty()) Text("Pas encore utilisé dans un projet.")
                     else {
                         Text("Utilisé dans :")
                         used.forEach { Text("• ${it.name.ifBlank { "Sans titre" }}") }
@@ -197,30 +197,16 @@ fun CollectionScreen(
     }
 }
 
-/** Écran plein « Catalogue » : je coche les pots que je possède. */
-@OptIn(ExperimentalMaterial3Api::class)
+/** Onglet « Catalogue » : je coche les pots que je possède, 🛒 pour la liste d'achat. */
 @Composable
-fun CatalogScreen(data: AppData, repo: Repository, onBack: () -> Unit) {
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text("Catalogue")
-                        Text(
-                            "${data.ownedPaintIds.size} possédés · ${data.toBuyIds.size} à acheter  (☑ = je l'ai, 🛒 = à acheter)",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Retour") }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
-            )
-        },
-    ) { padding ->
+fun CatalogScreen(data: AppData, repo: Repository, modifier: Modifier = Modifier) {
+    Column(modifier) {
+        Text(
+            "${data.ownedPaintIds.size} pots possédés · ${data.toBuyIds.size} à acheter — coche ce que tu as, 🛒 pour la liste d'achat",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = 16.dp),
+        )
         PaintBrowser(
             paints = remember(data.customPaints) { repo.allPaints(data) },
             ownedIds = data.ownedPaintIds,
@@ -237,7 +223,7 @@ fun CatalogScreen(data: AppData, repo: Repository, onBack: () -> Unit) {
                 }
                 Checkbox(checked = p.id in data.ownedPaintIds, onCheckedChange = { repo.setOwned(p.id, it) })
             },
-            modifier = Modifier.fillMaxSize().padding(padding),
+            modifier = Modifier.fillMaxSize(),
         )
     }
 }

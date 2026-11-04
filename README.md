@@ -2,12 +2,12 @@
 
 Carnet de peinture de figurines pour Android.
 
-- **Réalisations** : photo de la figurine terminée (appareil photo ou galerie), nom, notes, et toutes les étapes de peinture.
+- **Mes projets** : photo de la figurine terminée (appareil photo ou galerie), nom, notes, et toutes les étapes de peinture.
 - **Étapes** : titre (sous-couche, aplats, lavis…), technique **pinceau** ou **aérographe**, pots utilisés, notes (dilution, pression…). Réordonnables.
-- **Collection** : les pots que tu possèdes, cochés depuis le catalogue ou **scannés au code-barres** ; pots perso pour les autres marques. Un pot presque vide se marque « à racheter ».
-- **Achats** : la liste des pots à acheter/racheter (depuis la collection, le catalogue, une réalisation ou l'onglet Couleurs). Cocher un pot acheté — ou le scanner — le fait passer dans la collection. Liste partageable.
-- **Couleurs** : roue chromatique du peintre (RJB) ou de la lumière (RVB), harmonies (complémentaire, adjacentes, analogue, triade, rectangle, carré, camaïeu) et ombre/lumière ; pour chaque couleur, les pots du catalogue ou de ta collection les plus proches (écart ΔE en L*a*b*).
-- **Catalogue** : Citadel, Vallejo (Model Color, Game Color, Model Air, Xpress, lavis), The Army Painter (Warpaints, Quickshade, Speedpaint, bombes), Prince August — recherche par nom ou référence, filtres marque/gamme.
+- **Mes peintures** : les pots que tu possèdes, cochés depuis le catalogue ou **scannés au code-barres** ; pots perso pour les autres marques. Un pot presque vide se marque « à racheter ».
+- **Achat** : la liste des pots à acheter/racheter (depuis la collection, le catalogue, une réalisation ou l'onglet Couleurs). Cocher un pot acheté — ou le scanner — le fait passer dans la collection. Liste partageable.
+- **Théorie** : roue chromatique du peintre (RJB) ou de la lumière (RVB), harmonies (complémentaire, adjacentes, analogue, triade, rectangle, carré, camaïeu) et ombre/lumière ; pour chaque couleur, les pots du catalogue ou de ta collection les plus proches (écart ΔE en L*a*b*).
+- **Catalogue** (onglet) : Citadel, Vallejo (Model Color, Game Color, Model Air, Xpress, lavis), The Army Painter (Warpaints, Quickshade, Speedpaint, bombes), Prince August — recherche par nom ou référence, filtres marque/gamme.
 
 - **Sauvegarde / restauration** (menu ⋮) : exporte toutes les réalisations, photos, la collection et les pots perso dans un `.zip` (Drive, Téléchargements…), et le réimporte sur un autre téléphone.
 

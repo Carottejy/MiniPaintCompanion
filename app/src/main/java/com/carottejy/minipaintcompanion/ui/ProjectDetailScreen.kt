@@ -83,7 +83,7 @@ fun ProjectDetailScreen(
     ) { padding ->
         if (project == null) {
             Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                Text("Cette réalisation n'existe plus.")
+                Text("Ce projet n'existe plus.")
             }
             return@Scaffold
         }
@@ -236,7 +236,7 @@ fun ProjectDetailScreen(
     if (confirmDelete && project != null) {
         AlertDialog(
             onDismissRequest = { confirmDelete = false },
-            title = { Text("Supprimer cette réalisation ?") },
+            title = { Text("Supprimer ce projet ?") },
             text = { Text("La photo et toutes les étapes de « ${project.name.ifBlank { "Sans titre" }} » seront effacées.") },
             confirmButton = {
                 TextButton(onClick = {

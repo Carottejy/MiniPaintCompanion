@@ -53,4 +53,4 @@ jobs:
           gh release delete "v$VERSION_NAME" --yes --cleanup-tag 2>/dev/null || true
           gh release create "v$VERSION_NAME" MiniPaintCompanion-$VERSION_NAME.apk \
             --title "MiniPaintCompanion $VERSION_NAME" --latest \
-            --notes "Télécharge MiniPaintCompanion-$VERSION_NAME.apk depuis ton téléphone Android et ouvre-le pour l'installer. Les mises à jour s'installent par-dessus la version précédente sans perdre tes réalisations ni ta collection."
+            --notes "Télécharge MiniPaintCompanion-$VERSION_NAME.apk depuis ton téléphone Android et ouvre-le pour l'installer. Les mises à jour s'installent par-dessus la version précédente sans perdre tes projets ni tes peintures."
