@@ -14,6 +14,8 @@ Carnet de peinture de figurines pour Android.
 
 Les données restent sur le téléphone (fichier JSON + photos dans l'espace privé de l'app) ; pense à faire une sauvegarde avant de changer d'appareil.
 
+- **Pipette** : sur une photo, un curseur relève une couleur (moyenne de quelques pixels) ; l'appli propose les pots les plus proches (ΔE L*a*b*), à ajouter à la liste d'achat. Jusqu'à 8 couleurs épinglées pour composer une palette.
+
 ## Scan des codes-barres
 
 Le scanner de Google Play services lit les EAN/UPC. Les pots Vallejo sont reconnus automatiquement (EAN `8429551` + référence). Pour les autres marques, le premier scan d'un code inconnu demande de choisir le pot ; le code est ensuite mémorisé (et inclus dans la sauvegarde).

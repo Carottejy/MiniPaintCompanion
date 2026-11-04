@@ -69,6 +69,8 @@ import com.carottejy.minipaintcompanion.ui.ProjectEditorScreen
 import com.carottejy.minipaintcompanion.ui.ProjectsScreen
 import com.carottejy.minipaintcompanion.ui.ColorsScreen
 import com.carottejy.minipaintcompanion.ui.InfoScreen
+import com.carottejy.minipaintcompanion.ui.PipetteScreen
+import androidx.compose.material.icons.outlined.Colorize
 import androidx.compose.material.icons.outlined.Info
 import com.carottejy.minipaintcompanion.ui.ShoppingScreen
 import com.carottejy.minipaintcompanion.ui.UnknownBarcodeSheet
@@ -212,6 +214,7 @@ private val TABS = listOf(
     Tab("Catalogue", "Catalogue"),
     Tab("Liste d'achat", "Achat"),
     Tab("Théorie des couleurs", "Théorie"),
+    Tab("Pipette", "Pipette"),
     Tab("Informations", "Info"),
 )
 
@@ -220,7 +223,8 @@ private const val T_PAINTS = 1
 private const val T_CATALOG = 2
 private const val T_SHOPPING = 3
 private const val T_THEORY = 4
-private const val T_INFO = 5
+private const val T_PIPETTE = 5
+private const val T_INFO = 6
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -237,6 +241,7 @@ private fun HomeScreen(
     var confirmRestore by remember { mutableStateOf(false) }
     var unknownCode by rememberSaveable { mutableStateOf<String?>(null) }
     var colorBasePaintId by rememberSaveable { mutableStateOf<String?>(null) }
+    var colorFreeHex by rememberSaveable { mutableStateOf("#C8553D") }
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val snackbar = remember { SnackbarHostState() }
@@ -380,6 +385,7 @@ private fun HomeScreen(
                                 T_CATALOG -> Icons.Outlined.MenuBook
                                 T_SHOPPING -> Icons.Outlined.ShoppingCart
                                 T_THEORY -> Icons.Outlined.Palette
+                                T_PIPETTE -> Icons.Outlined.Colorize
                                 else -> Icons.Outlined.Info
                             }
                             if (i == T_SHOPPING && data.toBuyIds.isNotEmpty()) {
@@ -398,7 +404,8 @@ private fun HomeScreen(
                                 style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 0.sp, fontSize = 10.sp),
                             )
                         },
-                        alwaysShowLabel = true,
+                        // 7 onglets : icônes seules, libellé de l'onglet actif uniquement.
+                        alwaysShowLabel = false,
                     )
                 }
             }
@@ -426,10 +433,17 @@ private fun HomeScreen(
             T_CATALOG -> CatalogScreen(data, repo, modifier = m)
             T_SHOPPING -> ShoppingScreen(data, repo, onOpenCatalog = onOpenCatalog, onScan = { startScan() }, modifier = m)
             T_INFO -> InfoScreen(onCheckUpdate = { checkUpdate() }, modifier = m)
+            T_PIPETTE -> PipetteScreen(
+                data, repo,
+                onHarmonies = { hex -> colorFreeHex = hex; colorBasePaintId = null; tab = T_THEORY },
+                modifier = m,
+            )
             else -> ColorsScreen(
                 data, repo,
                 basePaintId = colorBasePaintId,
                 onBasePaintChange = { colorBasePaintId = it },
+                freeHex = colorFreeHex,
+                onFreeHexChange = { colorFreeHex = it },
                 modifier = m,
             )
         }

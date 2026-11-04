@@ -1,4 +1,10 @@
 ## @VERSION@ — @DATE@
+- Nouvel onglet Pipette : ouvre une photo, place le curseur sur une couleur et découvre les pots les plus proches du catalogue (ou de ta collection), à ajouter en un geste à la liste d'achat.
+- Épingle jusqu'à 8 couleurs d'une même image pour composer une palette, puis « Acheter la palette » ajoute les pots manquants.
+- La couleur relevée peut servir de base dans l'onglet Théorie.
+- Barre d'onglets : icônes, avec le nom de l'onglet actif.
+
+## 1.0.14 — 04/11/2026
 - Dictée continue : l'écoute ne s'arrête plus au premier silence. Parle à ton rythme, fais des pauses, corrige le texte si besoin, puis touche « Terminé ».
 - Bugs et idées : plus besoin de compte GitHub, le message est envoyé directement depuis l'appli.
 

@@ -86,12 +86,13 @@ fun ColorsScreen(
     repo: Repository,
     basePaintId: String?,
     onBasePaintChange: (String?) -> Unit,
+    freeHex: String,
+    onFreeHexChange: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val allPaints = remember(data.customPaints) { repo.allPaints(data) }
     val basePaint = allPaints.firstOrNull { it.id == basePaintId }
 
-    var freeHex by rememberSaveable { mutableStateOf("#C8553D") }
     var wheelName by rememberSaveable { mutableStateOf(Wheel.RYB.name) }
     var harmonyName by rememberSaveable { mutableStateOf(Harmony.COMPLEMENTARY.name) }
     var onlyMine by rememberSaveable { mutableStateOf(false) }
@@ -124,7 +125,7 @@ fun ColorsScreen(
                     wheel = wheel,
                     baseHex = baseHex,
                     swatches = swatches,
-                    onPick = { hex -> freeHex = hex; onBasePaintChange(null) },
+                    onPick = { hex -> onFreeHexChange(hex); onBasePaintChange(null) },
                     modifier = Modifier.widthIn(max = 360.dp).fillMaxWidth().aspectRatio(1f),
                 )
             }

@@ -84,6 +84,7 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
     implementation("io.coil-kt:coil-compose:2.7.0")
+    implementation("androidx.exifinterface:exifinterface:1.3.7")
     // Scan de codes-barres intégré : caméra CameraX + modèle ML Kit embarqué (fonctionne hors ligne,
     // sans module Google Play services à télécharger).
     implementation("androidx.camera:camera-camera2:1.4.1")
