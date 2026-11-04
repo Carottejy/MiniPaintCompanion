@@ -30,8 +30,16 @@ jobs:
       - name: APK signé
         run: |
           chmod +x gradlew
-          ./gradlew assembleGithubRelease --no-daemon
+          set -o pipefail
+          ./gradlew assembleGithubRelease --no-daemon 2>&1 | tee build.log
           cp app/build/outputs/apk/github/release/app-github-release.apk MiniPaintCompanion-${VERSION_NAME}.apk
+
+      - name: Erreurs de compilation (annotations)
+        if: failure()
+        run: |
+          grep -E "^e: |error:|What went wrong|Could not|Execution failed|> " build.log | head -40 | while IFS= read -r line; do
+            echo "::error::${line}"
+          done
 
       - uses: actions/upload-artifact@v4
         with:
