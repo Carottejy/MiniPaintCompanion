@@ -84,6 +84,10 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
     implementation("io.coil-kt:coil-compose:2.7.0")
-    // Scanner de codes-barres de Google Play services : pas de permission caméra à demander.
-    implementation("com.google.android.gms:play-services-code-scanner:16.1.0")
+    // Scan de codes-barres intégré : caméra CameraX + modèle ML Kit embarqué (fonctionne hors ligne,
+    // sans module Google Play services à télécharger).
+    implementation("androidx.camera:camera-camera2:1.4.1")
+    implementation("androidx.camera:camera-lifecycle:1.4.1")
+    implementation("androidx.camera:camera-view:1.4.1")
+    implementation("com.google.mlkit:barcode-scanning:17.3.0")
 }

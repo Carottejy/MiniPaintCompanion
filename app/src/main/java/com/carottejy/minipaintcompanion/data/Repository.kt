@@ -91,7 +91,9 @@ class Repository private constructor(context: Context) {
      * Retrouve le pot d'un code-barres : d'abord les codes déjà appris,
      * puis la structure des EAN Vallejo (8429551 + référence à 5 chiffres + clé).
      */
-    fun paintForBarcode(code: String, d: AppData = _data.value): Paint? {
+    fun paintForBarcode(raw: String, d: AppData = _data.value): Paint? {
+        val digits = raw.filter { it.isDigit() }
+        val code = if (digits.length == 12) "0$digits" else digits
         val all = allPaints(d)
         d.barcodes[code]?.let { id -> all.firstOrNull { it.id == id }?.let { return it } }
         if (code.length == 13 && code.startsWith("8429551")) {

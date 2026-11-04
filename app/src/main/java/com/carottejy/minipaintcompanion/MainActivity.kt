@@ -67,7 +67,7 @@ import com.carottejy.minipaintcompanion.ui.ProjectsScreen
 import com.carottejy.minipaintcompanion.ui.ColorsScreen
 import com.carottejy.minipaintcompanion.ui.ShoppingScreen
 import com.carottejy.minipaintcompanion.ui.UnknownBarcodeSheet
-import com.carottejy.minipaintcompanion.ui.scanBarcode
+import com.carottejy.minipaintcompanion.ui.BarcodeScannerOverlay
 import com.carottejy.minipaintcompanion.ui.shortLabel
 import com.carottejy.minipaintcompanion.update.UpdateDialog
 import com.carottejy.minipaintcompanion.update.UpdateInfo
@@ -218,16 +218,9 @@ private fun HomeScreen(
         }
     }
 
-    fun startScan() {
-        scanBarcode(
-            context,
-            onCode = { code ->
-                val p = repo.paintForBarcode(code)
-                if (p != null) added(p, code) else unknownCode = code
-            },
-            onError = { toast(it) },
-        )
-    }
+    var scanning by rememberSaveable { mutableStateOf(false) }
+    fun startScan() { scanning = true }
+
     LaunchedEffect(rescanRequests) { if (rescanRequests > 0) startScan() }
 
     // ---------------------------------------------------------------- sauvegarde
@@ -251,6 +244,7 @@ private fun HomeScreen(
         }
     }
 
+    Box(Modifier.fillMaxSize()) {
     Scaffold(
         snackbarHost = { SnackbarHost(snackbar) },
         topBar = {
@@ -389,6 +383,18 @@ private fun HomeScreen(
                 modifier = m,
             )
         }
+    }
+
+    if (scanning) {
+        BarcodeScannerOverlay(
+            onCode = { code ->
+                scanning = false
+                val p = repo.paintForBarcode(code)
+                if (p != null) added(p, code) else unknownCode = code
+            },
+            onClose = { scanning = false },
+        )
+    }
     }
 
     unknownCode?.let { code ->
