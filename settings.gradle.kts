@@ -14,5 +14,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "MiniPenCompanion"
+rootProject.name = "MiniPaintCompanion"
 include(":app")

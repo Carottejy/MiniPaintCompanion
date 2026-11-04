@@ -1,4 +1,4 @@
-package com.carottejy.minipen.ui
+package com.carottejy.minipaintcompanion.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -34,9 +34,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
-import com.carottejy.minipen.data.Brand
-import com.carottejy.minipen.data.Paint
-import com.carottejy.minipen.data.Technique
+import com.carottejy.minipaintcompanion.data.Brand
+import com.carottejy.minipaintcompanion.data.Paint
+import com.carottejy.minipaintcompanion.data.Technique
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date

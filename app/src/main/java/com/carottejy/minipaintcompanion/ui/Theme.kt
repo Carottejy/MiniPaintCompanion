@@ -1,4 +1,4 @@
-package com.carottejy.minipen.ui
+package com.carottejy.minipaintcompanion.ui
 
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
@@ -55,6 +55,6 @@ private val typography = base.copy(
 )
 
 @Composable
-fun MiniPenTheme(content: @Composable () -> Unit) {
+fun MiniPaintTheme(content: @Composable () -> Unit) {
     MaterialTheme(colorScheme = scheme, typography = typography, content = content)
 }

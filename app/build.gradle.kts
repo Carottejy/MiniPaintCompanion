@@ -6,11 +6,11 @@ plugins {
 }
 
 android {
-    namespace = "com.carottejy.minipen"
+    namespace = "com.carottejy.minipaintcompanion"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.carottejy.minipen"
+        applicationId = "com.carottejy.minipaintcompanion"
         minSdk = 26
         targetSdk = 35
         // Le CI passe le numéro de build pour que chaque APK soit installable par-dessus le précédent.

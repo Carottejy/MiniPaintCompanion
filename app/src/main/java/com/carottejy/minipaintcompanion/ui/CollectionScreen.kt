@@ -1,4 +1,4 @@
-package com.carottejy.minipen.ui
+package com.carottejy.minipaintcompanion.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -45,10 +45,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.carottejy.minipen.data.AppData
-import com.carottejy.minipen.data.Brand
-import com.carottejy.minipen.data.Paint
-import com.carottejy.minipen.data.Repository
+import com.carottejy.minipaintcompanion.data.AppData
+import com.carottejy.minipaintcompanion.data.Brand
+import com.carottejy.minipaintcompanion.data.Paint
+import com.carottejy.minipaintcompanion.data.Repository
 
 /** Onglet « Ma collection » : les pots que je possède. */
 @Composable

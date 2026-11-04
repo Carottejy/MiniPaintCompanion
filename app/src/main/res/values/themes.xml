@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.MiniPen" parent="android:Theme.Material.NoActionBar">
+    <style name="Theme.MiniPaint" parent="android:Theme.Material.NoActionBar">
         <item name="android:statusBarColor">#FF17140F</item>
         <item name="android:navigationBarColor">#FF17140F</item>
         <item name="android:windowBackground">#FF17140F</item>

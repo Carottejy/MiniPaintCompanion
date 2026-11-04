@@ -1,4 +1,4 @@
-package com.carottejy.minipen.ui
+package com.carottejy.minipaintcompanion.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -48,8 +48,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import com.carottejy.minipen.data.AppData
-import com.carottejy.minipen.data.Repository
+import com.carottejy.minipaintcompanion.data.AppData
+import com.carottejy.minipaintcompanion.data.Repository
 
 @OptIn(ExperimentalMaterial3Api::class, androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable

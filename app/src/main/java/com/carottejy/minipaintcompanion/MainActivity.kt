@@ -1,4 +1,4 @@
-package com.carottejy.minipen
+package com.carottejy.minipaintcompanion
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -14,6 +14,22 @@ import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.Inventory2
 import androidx.compose.material.icons.outlined.LibraryAdd
 import androidx.compose.material.icons.outlined.MenuBook
+import androidx.compose.material.icons.outlined.MoreVert
+import androidx.compose.material.icons.outlined.Restore
+import androidx.compose.material.icons.outlined.SaveAlt
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.platform.LocalContext
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import android.widget.Toast
+import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
@@ -38,15 +54,15 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.carottejy.minipen.data.AppData
-import com.carottejy.minipen.data.Repository
-import com.carottejy.minipen.ui.CatalogScreen
-import com.carottejy.minipen.ui.CollectionScreen
-import com.carottejy.minipen.ui.CustomPaintDialog
-import com.carottejy.minipen.ui.MiniPenTheme
-import com.carottejy.minipen.ui.ProjectDetailScreen
-import com.carottejy.minipen.ui.ProjectEditorScreen
-import com.carottejy.minipen.ui.ProjectsScreen
+import com.carottejy.minipaintcompanion.data.AppData
+import com.carottejy.minipaintcompanion.data.Repository
+import com.carottejy.minipaintcompanion.ui.CatalogScreen
+import com.carottejy.minipaintcompanion.ui.CollectionScreen
+import com.carottejy.minipaintcompanion.ui.CustomPaintDialog
+import com.carottejy.minipaintcompanion.ui.MiniPaintTheme
+import com.carottejy.minipaintcompanion.ui.ProjectDetailScreen
+import com.carottejy.minipaintcompanion.ui.ProjectEditorScreen
+import com.carottejy.minipaintcompanion.ui.ProjectsScreen
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -54,7 +70,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         val repo = Repository.get(this)
         setContent {
-            MiniPenTheme {
+            MiniPaintTheme {
                 App(repo)
             }
         }
@@ -127,6 +143,29 @@ private fun HomeScreen(
 ) {
     var tab by rememberSaveable { mutableIntStateOf(0) }
     var showCustom by remember { mutableStateOf(false) }
+    var menuOpen by remember { mutableStateOf(false) }
+    var confirmRestore by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+
+    val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
+        if (uri != null) scope.launch {
+            val msg = runCatching { repo.exportBackup(uri) }.fold(
+                { n -> "Sauvegarde créée ($n réalisation${if (n > 1) "s" else ""})" },
+                { e -> "Échec de la sauvegarde : ${e.message}" },
+            )
+            Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+        }
+    }
+    val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) scope.launch {
+            val msg = runCatching { repo.importBackup(uri) }.fold(
+                { n -> "Sauvegarde restaurée ($n réalisation${if (n > 1) "s" else ""})" },
+                { e -> "Échec de la restauration : ${e.message}" },
+            )
+            Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -134,7 +173,7 @@ private fun HomeScreen(
                 title = {
                     Column {
                         Text(
-                            "MINIPEN COMPANION",
+                            "MINIPAINT COMPANION",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.primary,
                         )
@@ -149,6 +188,25 @@ private fun HomeScreen(
                         IconButton(onClick = { showCustom = true }) {
                             Icon(Icons.Outlined.LibraryAdd, contentDescription = "Ajouter un pot perso")
                         }
+                    }
+                    IconButton(onClick = { menuOpen = true }) {
+                        Icon(Icons.Outlined.MoreVert, contentDescription = "Plus d'options")
+                    }
+                    DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                        DropdownMenuItem(
+                            text = { Text("Sauvegarder mes données") },
+                            leadingIcon = { Icon(Icons.Outlined.SaveAlt, contentDescription = null) },
+                            onClick = {
+                                menuOpen = false
+                                val day = SimpleDateFormat("yyyy-MM-dd", Locale.FRANCE).format(Date())
+                                exportLauncher.launch("MiniPaintCompanion-sauvegarde-$day.zip")
+                            },
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Restaurer une sauvegarde") },
+                            leadingIcon = { Icon(Icons.Outlined.Restore, contentDescription = null) },
+                            onClick = { menuOpen = false; confirmRestore = true },
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
@@ -194,4 +252,24 @@ private fun HomeScreen(
     }
 
     if (showCustom) CustomPaintDialog(repo, onDismiss = { showCustom = false })
+
+    if (confirmRestore) {
+        AlertDialog(
+            onDismissRequest = { confirmRestore = false },
+            title = { Text("Restaurer une sauvegarde ?") },
+            text = {
+                Text(
+                    "Tes réalisations, ta collection et tes pots perso actuels seront remplacés " +
+                        "par le contenu du fichier .zip choisi."
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmRestore = false
+                    importLauncher.launch(arrayOf("application/zip", "application/x-zip-compressed", "application/octet-stream"))
+                }) { Text("Choisir le fichier") }
+            },
+            dismissButton = { TextButton(onClick = { confirmRestore = false }) { Text("Annuler") } },
+        )
+    }
 }

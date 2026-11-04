@@ -1,4 +1,4 @@
-package com.carottejy.minipen.ui
+package com.carottejy.minipaintcompanion.ui
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -34,9 +34,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.carottejy.minipen.data.Brand
-import com.carottejy.minipen.data.Catalog
-import com.carottejy.minipen.data.Paint
+import com.carottejy.minipaintcompanion.data.Brand
+import com.carottejy.minipaintcompanion.data.Catalog
+import com.carottejy.minipaintcompanion.data.Paint
 
 private fun normalize(s: String) = Catalog.slug(s).replace("-", "")
 

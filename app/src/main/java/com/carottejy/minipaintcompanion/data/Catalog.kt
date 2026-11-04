@@ -1,4 +1,4 @@
-package com.carottejy.minipen.data
+package com.carottejy.minipaintcompanion.data
 
 import java.text.Normalizer
 

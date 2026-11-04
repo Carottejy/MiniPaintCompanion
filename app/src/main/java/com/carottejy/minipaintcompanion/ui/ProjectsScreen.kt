@@ -1,4 +1,4 @@
-package com.carottejy.minipen.ui
+package com.carottejy.minipaintcompanion.ui
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -31,9 +31,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.carottejy.minipen.data.AppData
-import com.carottejy.minipen.data.Project
-import com.carottejy.minipen.data.Repository
+import com.carottejy.minipaintcompanion.data.AppData
+import com.carottejy.minipaintcompanion.data.Project
+import com.carottejy.minipaintcompanion.data.Repository
 
 @Composable
 fun ProjectsScreen(

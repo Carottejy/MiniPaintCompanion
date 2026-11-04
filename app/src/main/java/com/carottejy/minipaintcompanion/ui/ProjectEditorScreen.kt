@@ -1,4 +1,4 @@
-package com.carottejy.minipen.ui
+package com.carottejy.minipaintcompanion.ui
 
 import android.content.ActivityNotFoundException
 import android.widget.Toast
@@ -69,11 +69,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
-import com.carottejy.minipen.data.AppData
-import com.carottejy.minipen.data.Project
-import com.carottejy.minipen.data.Repository
-import com.carottejy.minipen.data.Step
-import com.carottejy.minipen.data.Technique
+import com.carottejy.minipaintcompanion.data.AppData
+import com.carottejy.minipaintcompanion.data.Project
+import com.carottejy.minipaintcompanion.data.Repository
+import com.carottejy.minipaintcompanion.data.Step
+import com.carottejy.minipaintcompanion.data.Technique
 import kotlinx.coroutines.launch
 import java.io.File
 import java.util.UUID

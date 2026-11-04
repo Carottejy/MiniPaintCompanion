@@ -1,4 +1,4 @@
-package com.carottejy.minipen.data
+package com.carottejy.minipaintcompanion.data
 
 import android.content.Context
 import android.net.Uri
@@ -16,12 +16,15 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import java.io.File
 import java.util.UUID
+import java.util.zip.ZipEntry
+import java.util.zip.ZipInputStream
+import java.util.zip.ZipOutputStream
 
 /** Stockage local : un fichier JSON + un dossier de photos dans l'espace privé de l'app. */
 class Repository private constructor(context: Context) {
 
     private val appContext = context.applicationContext
-    private val file = File(appContext.filesDir, "minipen.json")
+    private val file = File(appContext.filesDir, "minipaint.json")
     val photosDir: File = File(appContext.filesDir, "photos").apply { mkdirs() }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -39,7 +42,7 @@ class Repository private constructor(context: Context) {
     } catch (e: Exception) {
         // Fichier illisible : on le garde de côté plutôt que de l'écraser.
         runCatching {
-            file.copyTo(File(appContext.filesDir, "minipen-corrompu-${System.currentTimeMillis()}.json"), overwrite = true)
+            file.copyTo(File(appContext.filesDir, "minipaint-corrompu-${System.currentTimeMillis()}.json"), overwrite = true)
         }
         AppData()
     }
@@ -48,7 +51,7 @@ class Repository private constructor(context: Context) {
         scope.launch {
             saveMutex.withLock {
                 val text = json.encodeToString(AppData.serializer(), _data.value)
-                val tmp = File(file.parentFile, "minipen.json.tmp")
+                val tmp = File(file.parentFile, "minipaint.json.tmp")
                 tmp.writeText(text)
                 if (!tmp.renameTo(file)) {
                     file.writeText(text)
@@ -126,6 +129,68 @@ class Repository private constructor(context: Context) {
         }
     }
 
+    // ------------------------------------------------------------ sauvegarde
+
+    /** Écrit un zip contenant les données et toutes les photos. Retourne le nombre de réalisations. */
+    suspend fun exportBackup(uri: Uri): Int = withContext(Dispatchers.IO) {
+        val snapshot = _data.value
+        val out = appContext.contentResolver.openOutputStream(uri) ?: error("Impossible d'écrire le fichier")
+        ZipOutputStream(out).use { zip ->
+            zip.putNextEntry(ZipEntry(BACKUP_JSON))
+            zip.write(json.encodeToString(AppData.serializer(), snapshot).toByteArray())
+            zip.closeEntry()
+            snapshot.projects.mapNotNull { it.photo }.distinct().forEach { name ->
+                val f = File(photosDir, name)
+                if (f.exists()) {
+                    zip.putNextEntry(ZipEntry("photos/$name"))
+                    f.inputStream().use { it.copyTo(zip) }
+                    zip.closeEntry()
+                }
+            }
+        }
+        snapshot.projects.size
+    }
+
+    /** Remplace toutes les données par celles d'une sauvegarde. Retourne le nombre de réalisations. */
+    suspend fun importBackup(uri: Uri): Int = withContext(Dispatchers.IO) {
+        val staging = File(appContext.cacheDir, "restore").apply { deleteRecursively(); mkdirs() }
+        try {
+            var imported: AppData? = null
+            val input = appContext.contentResolver.openInputStream(uri) ?: error("Impossible de lire le fichier")
+            ZipInputStream(input).use { zip ->
+                var entry = zip.nextEntry
+                while (entry != null) {
+                    val name = entry.name
+                    when {
+                        name == BACKUP_JSON ->
+                            imported = json.decodeFromString(AppData.serializer(), zip.readBytes().decodeToString())
+                        name.startsWith("photos/") && !entry.isDirectory -> {
+                            // On ne garde que le nom de fichier : pas de chemin arbitraire dans l'archive.
+                            val safe = File(name).name
+                            if (safe.isNotBlank()) File(staging, safe).outputStream().use { zip.copyTo(it) }
+                        }
+                    }
+                    zip.closeEntry()
+                    entry = zip.nextEntry
+                }
+            }
+            val restored = imported ?: throw IllegalArgumentException("Ce fichier n'est pas une sauvegarde MiniPaintCompanion")
+
+            staging.listFiles()?.forEach { f ->
+                val target = File(photosDir, f.name)
+                if (!f.renameTo(target)) { f.copyTo(target, overwrite = true); f.delete() }
+            }
+            val keep = restored.projects.mapNotNull { it.photo }.toSet()
+            photosDir.listFiles()?.forEach { if (it.name !in keep) it.delete() }
+
+            _data.value = restored
+            persist()
+            restored.projects.size
+        } finally {
+            staging.deleteRecursively()
+        }
+    }
+
     private fun cleanOrphanPhotos() {
         // On laisse une marge d'une heure pour ne pas supprimer la photo d'un brouillon en cours.
         val used = _data.value.projects.mapNotNull { it.photo }.toSet()
@@ -136,6 +201,7 @@ class Repository private constructor(context: Context) {
     }
 
     companion object {
+        private const val BACKUP_JSON = "minipaint.json"
         val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
 
         @Volatile private var instance: Repository? = null
