@@ -4,6 +4,7 @@ Carnet de peinture de figurines pour Android.
 
 - **Mes projets** : photo de la figurine terminée (appareil photo ou galerie), nom, notes, et toutes les étapes de peinture.
 - **Étapes** : titre (sous-couche, aplats, lavis…), technique **pinceau** ou **aérographe**, pots utilisés, notes (dilution, pression…). Réordonnables.
+- **Dictée vocale** : dans un projet, le bouton « Dicter » crée une ou plusieurs étapes à partir d'une phrase (« Aplats au pinceau avec Macragge Blue, dilué 1 pour 1, ensuite lavis avec Nuln Oil ») ; le micro d'une étape la complète. Titre, technique, pots (reconnaissance tolérante aux fautes de transcription, références Vallejo comprises) et notes (dilution, pression…) sont remplis automatiquement.
 - **Mes peintures** : les pots que tu possèdes, cochés depuis le catalogue ou **scannés au code-barres** ; pots perso pour les autres marques. Un pot presque vide se marque « à racheter ».
 - **Achat** : la liste des pots à acheter/racheter (depuis la collection, le catalogue, une réalisation ou l'onglet Couleurs). Cocher un pot acheté — ou le scanner — le fait passer dans la collection. Liste partageable.
 - **Théorie** : roue chromatique du peintre (RJB) ou de la lumière (RVB), harmonies (complémentaire, adjacentes, analogue, triade, rectangle, carré, camaïeu) et ombre/lumière ; pour chaque couleur, les pots du catalogue ou de ta collection les plus proches (écart ΔE en L*a*b*).

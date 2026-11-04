@@ -1,6 +1,12 @@
 package com.carottejy.minipaintcompanion.ui
 
+import android.app.Activity
 import android.content.ActivityNotFoundException
+import android.content.Intent
+import android.os.Build
+import android.speech.RecognizerIntent
+import androidx.compose.material.icons.filled.Mic
+import com.carottejy.minipaintcompanion.data.VoiceParser
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -85,6 +91,7 @@ private val STEP_SUGGESTIONS = listOf(
 
 private fun encode(p: Project) = Repository.json.encodeToString(Project.serializer(), p)
 private fun decode(s: String) = Repository.json.decodeFromString(Project.serializer(), s)
+private const val NEW_STEPS = "__new__"
 private fun newStep() = Step(id = UUID.randomUUID().toString())
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -113,6 +120,71 @@ fun ProjectEditorScreen(
     var pendingPhoto by rememberSaveable { mutableStateOf<String?>(null) }
     var pickingStepId by rememberSaveable { mutableStateOf<String?>(null) }
     var confirmDiscard by remember { mutableStateOf(false) }
+
+    // ---------------------------------------------------------------- dictée vocale
+    // Cible : identifiant d'une étape à compléter, ou NEW_STEPS pour créer de nouvelles étapes.
+    var voiceTarget by rememberSaveable { mutableStateOf<String?>(null) }
+    val speech = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        val target = voiceTarget
+        voiceTarget = null
+        val text = result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)?.firstOrNull()
+        if (result.resultCode != Activity.RESULT_OK || text.isNullOrBlank() || target == null) return@rememberLauncherForActivityResult
+        val parsed = VoiceParser.parse(text, repo.allPaints(data), data.ownedPaintIds)
+        if (parsed.isEmpty()) {
+            Toast.makeText(context, "Je n'ai rien compris d'utile dans « $text »", Toast.LENGTH_LONG).show()
+            return@rememberLauncherForActivityResult
+        }
+        val nbPaints = parsed.sumOf { it.paintIds.size }
+        if (target == NEW_STEPS) {
+            update { p ->
+                var last = p.steps.lastOrNull()?.technique ?: Technique.BRUSH
+                val added = parsed.map { ps ->
+                    val t = ps.technique ?: last
+                    last = t
+                    newStep().copy(title = ps.title, technique = t, paintIds = ps.paintIds, notes = ps.notes)
+                }
+                // Une étape vide en fin de liste (ex. « Sous-couche » par défaut, sans pot) est remplacée.
+                val base = p.steps.toMutableList()
+                val tail = base.lastOrNull()
+                if (tail != null && tail.paintIds.isEmpty() && tail.notes.isBlank() && base.size == 1 && p.steps.size == 1 && added.first().title.isNotBlank()) {
+                    base.removeAt(base.lastIndex)
+                }
+                p.copy(steps = base + added)
+            }
+            Toast.makeText(
+                context,
+                "« $text »\n${parsed.size} étape${if (parsed.size > 1) "s" else ""} ajoutée${if (parsed.size > 1) "s" else ""}, $nbPaints pot${if (nbPaints > 1) "s" else ""} reconnu${if (nbPaints > 1) "s" else ""}. Vérifie avant d'enregistrer.",
+                Toast.LENGTH_LONG,
+            ).show()
+        } else {
+            updateStep(target) { st -> parsed.fold(st) { acc, ps -> VoiceParser.merge(acc, ps) } }
+            Toast.makeText(context, "« $text »\n$nbPaints pot${if (nbPaints > 1) "s" else ""} reconnu${if (nbPaints > 1) "s" else ""}", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    fun dictate(target: String) {
+        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE, "fr-FR")
+            putExtra(
+                RecognizerIntent.EXTRA_PROMPT,
+                if (target == NEW_STEPS) "Ex. : « Aplats au pinceau avec Macragge Blue, dilué 1 pour 1, ensuite lavis avec Nuln Oil »"
+                else "Dis la technique, les pots et tes notes",
+            )
+            // Aide la reconnaissance à comprendre les noms (anglais) des pots de ta collection.
+            if (Build.VERSION.SDK_INT >= 33) {
+                val names = repo.allPaints(data).filter { it.id in data.ownedPaintIds }.map { it.name }.distinct().take(300)
+                putStringArrayListExtra("android.speech.extra.BIASING_STRINGS", ArrayList(names))
+            }
+        }
+        voiceTarget = target
+        try {
+            speech.launch(intent)
+        } catch (e: ActivityNotFoundException) {
+            voiceTarget = null
+            Toast.makeText(context, "Aucune reconnaissance vocale disponible sur ce téléphone (installe ou active l'appli Google).", Toast.LENGTH_LONG).show()
+        }
+    }
     val dirty = draftJson != originalJson
 
     fun replacePhoto(name: String) {
@@ -253,20 +325,34 @@ fun ProjectEditorScreen(
                     },
                     onDelete = { update { p -> p.copy(steps = p.steps.filterNot { it.id == step.id }) } },
                     onPickPaints = { pickingStepId = step.id },
+                    onDictate = { dictate(step.id) },
                 )
             }
             item {
-                OutlinedButton(
-                    onClick = {
-                        // La nouvelle étape reprend la technique de la précédente : on enchaîne souvent pareil.
-                        update { p -> p.copy(steps = p.steps + newStep().copy(technique = p.steps.lastOrNull()?.technique ?: Technique.BRUSH)) }
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Icon(Icons.Default.Add, contentDescription = null)
-                    Spacer(Modifier.width(8.dp))
-                    Text("Ajouter une étape")
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(
+                        onClick = {
+                            // La nouvelle étape reprend la technique de la précédente : on enchaîne souvent pareil.
+                            update { p -> p.copy(steps = p.steps + newStep().copy(technique = p.steps.lastOrNull()?.technique ?: Technique.BRUSH)) }
+                        },
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Étape")
+                    }
+                    Button(onClick = { dictate(NEW_STEPS) }, modifier = Modifier.weight(1f)) {
+                        Icon(Icons.Default.Mic, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Dicter")
+                    }
                 }
+                Text(
+                    "Dicte une ou plusieurs étapes : « Sous-couche à l'aérographe avec Wraithbone, ensuite lavis avec Agrax Earthshade, note : bien laisser sécher ».",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 6.dp),
+                )
             }
         }
     }
@@ -336,6 +422,7 @@ private fun StepEditorCard(
     onMove: (Int) -> Unit,
     onDelete: () -> Unit,
     onPickPaints: () -> Unit,
+    onDictate: () -> Unit,
 ) {
     val paintsById = remember(data) { repo.allPaints(data).associateBy { it.id } }
     Card(
@@ -356,6 +443,9 @@ private fun StepEditorCard(
                 }
                 IconButton(onClick = { onMove(1) }, enabled = index < count - 1) {
                     Icon(Icons.Outlined.KeyboardArrowDown, contentDescription = "Descendre")
+                }
+                IconButton(onClick = onDictate) {
+                    Icon(Icons.Default.Mic, contentDescription = "Dicter pour cette étape", tint = MaterialTheme.colorScheme.primary)
                 }
                 IconButton(onClick = onDelete) {
                     Icon(Icons.Outlined.Delete, contentDescription = "Supprimer l'étape")
