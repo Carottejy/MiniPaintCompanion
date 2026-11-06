@@ -1,4 +1,7 @@
 ## @VERSION@ — @DATE@
+- Nouvelle étape suggérée : « Lining » (aussi reconnue à la dictée : « lining », « filets »).
+
+## 1.0.19 — 06/11/2026
 - Les projets s'appellent désormais des schémas (onglet « Mes schémas »).
 - Partage de schéma : en fichier MiniPaint (l'autre utilisateur l'ouvre et le schéma complet s'ajoute chez lui) ou en texte avec la photo pour un message ou un forum. Import aussi depuis le menu ⋮.
 - Nouveau catalogue AK Interactive 3rd Generation (230 couleurs, références AK11001 à AK11230, codes-barres compris) et primers AK.

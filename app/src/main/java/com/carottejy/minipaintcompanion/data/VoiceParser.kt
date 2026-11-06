@@ -33,6 +33,7 @@ object VoiceParser {
         Regex("""eclairciss|highlight|rehaut|lumiere""") to "Éclaircissements",
         Regex("""glacis|glaze""") to "Glacis",
         Regex("""ombre""") to "Ombres",
+        Regex("""linn?ing|lignage|filet""") to "Lining",
         Regex("""detail""") to "Détails",
         Regex("""usure|effet|rouille|salissure""") to "Usure / effets",
         Regex("""socle""") to "Socle",

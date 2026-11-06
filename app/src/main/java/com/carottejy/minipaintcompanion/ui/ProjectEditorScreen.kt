@@ -90,7 +90,7 @@ import java.util.UUID
 
 private val STEP_SUGGESTIONS = listOf(
     "Sous-couche", "Aplats", "Lavis", "Brossage à sec", "Éclaircissements",
-    "Glacis", "Détails", "Usure / effets", "Socle", "Vernis",
+    "Glacis", "Lining", "Détails", "Usure / effets", "Socle", "Vernis",
 )
 
 private fun encode(p: Project) = Repository.json.encodeToString(Project.serializer(), p)
