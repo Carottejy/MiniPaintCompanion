@@ -1,4 +1,7 @@
 ## @VERSION@ — @DATE@
+- Les groupes contiennent leurs étapes : touche l'en-tête pour replier ou ouvrir le groupe (fiche et éditeur), avec le nombre d'étapes. Déplacer un groupe déplace toutes ses étapes.
+
+## 1.0.22 — 06/11/2026
 - Groupes d'étapes (optionnels) : un simple titre (« Armure », « Peau », « Socle »…) qui regroupe les étapes suivantes, dans l'éditeur, la fiche et le partage.
 - Mélanges : une étape peut contenir des mélanges de deux pots avec un ratio réglable (de 5/95 à 95/5, affiché aussi en 1:1, 2:1…) et un aperçu de la teinte obtenue.
 

@@ -84,6 +84,10 @@ import com.carottejy.minipaintcompanion.data.Project
 import com.carottejy.minipaintcompanion.data.Repository
 import com.carottejy.minipaintcompanion.data.Step
 import com.carottejy.minipaintcompanion.data.Mix
+import com.carottejy.minipaintcompanion.data.groupOwners
+import com.carottejy.minipaintcompanion.data.groupSizes
+import com.carottejy.minipaintcompanion.data.moveGroup
+import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import com.carottejy.minipaintcompanion.data.Paint
 import com.carottejy.minipaintcompanion.data.ColorTheory
 import androidx.compose.foundation.background
@@ -133,6 +137,10 @@ fun ProjectEditorScreen(
     var managingPrimers by remember { mutableStateOf(false) }
     // Choix d'un pot de mélange : "idÉtape|indexMélange (-1 = nouveau)|A ou B|pot A déjà choisi"
     var mixPick by rememberSaveable { mutableStateOf<String?>(null) }
+    // Groupes repliés (identifiants séparés par des virgules, pour survivre à la rotation).
+    var collapsedText by rememberSaveable { mutableStateOf("") }
+    val collapsed = collapsedText.split(",").filter { it.isNotBlank() }.toSet()
+    fun setCollapsed(v: Set<String>) { collapsedText = v.joinToString(",") }
     var confirmDiscard by remember { mutableStateOf(false) }
 
     // ---------------------------------------------------------------- dictée vocale
@@ -321,7 +329,11 @@ fun ProjectEditorScreen(
                     modifier = Modifier.padding(top = 8.dp),
                 )
             }
+            val owners = draft.steps.groupOwners()
+            val sizes = draft.steps.groupSizes()
             itemsIndexed(draft.steps, key = { _, s -> s.id }) { index, step ->
+                // Étape d'un groupe replié : masquée.
+                if (owners[index] != null && owners[index] in collapsed) return@itemsIndexed
                 val onMove: (Int) -> Unit = { delta ->
                     update { p ->
                         val list = p.steps.toMutableList()
@@ -333,12 +345,16 @@ fun ProjectEditorScreen(
                     }
                 }
                 if (step.group) {
+                    val open = step.id !in collapsed
                     GroupHeaderCard(
                         step = step,
+                        stepCount = sizes[step.id] ?: 0,
+                        expanded = open,
+                        onToggle = { setCollapsed(if (open) collapsed + step.id else collapsed - step.id) },
                         canUp = index > 0,
-                        canDown = index < draft.steps.lastIndex,
+                        canDown = index + 1 + (sizes[step.id] ?: 0) <= draft.steps.lastIndex,
                         onTitle = { v -> updateStep(step.id) { it.copy(title = v) } },
-                        onMove = onMove,
+                        onMove = { delta -> update { p -> p.copy(steps = p.steps.moveGroup(step.id, delta)) } },
                         onDelete = { update { p -> p.copy(steps = p.steps.filterNot { it.id == step.id }) } },
                     )
                     return@itemsIndexed
@@ -364,6 +380,7 @@ fun ProjectEditorScreen(
                         onClick = {
                             // La nouvelle étape reprend la technique de la précédente : on enchaîne souvent pareil.
                             update { p -> p.copy(steps = p.steps + newStep().copy(technique = p.steps.lastOrNull()?.technique ?: Technique.BRUSH)) }
+                            draft.steps.groupOwners().lastOrNull()?.let { g -> setCollapsed(collapsed - g) }
                         },
                         modifier = Modifier.weight(1f),
                     ) {
@@ -701,6 +718,9 @@ private fun StepEditorCard(
 @Composable
 private fun GroupHeaderCard(
     step: Step,
+    stepCount: Int,
+    expanded: Boolean,
+    onToggle: () -> Unit,
     canUp: Boolean,
     canDown: Boolean,
     onTitle: (String) -> Unit,
@@ -713,15 +733,20 @@ private fun GroupHeaderCard(
             .padding(top = 8.dp)
             .clip(RoundedCornerShape(14.dp))
             .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f))
-            .padding(start = 12.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
+            .padding(start = 0.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(Icons.Outlined.ViewAgenda, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-        Spacer(Modifier.width(8.dp))
+        IconButton(onClick = onToggle) {
+            Icon(
+                if (expanded) Icons.Outlined.KeyboardArrowDown else Icons.AutoMirrored.Outlined.KeyboardArrowRight,
+                contentDescription = if (expanded) "Replier le groupe" else "Ouvrir le groupe",
+                tint = MaterialTheme.colorScheme.primary,
+            )
+        }
         OutlinedTextField(
             value = step.title,
             onValueChange = onTitle,
-            label = { Text("Groupe") },
+            label = { Text("Groupe · $stepCount étape${if (stepCount > 1) "s" else ""}") },
             placeholder = { Text("ex. Armure, Peau, Cape, Socle…") },
             singleLine = true,
             modifier = Modifier.weight(1f),

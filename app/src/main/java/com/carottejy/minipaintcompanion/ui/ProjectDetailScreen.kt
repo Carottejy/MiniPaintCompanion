@@ -50,6 +50,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.carottejy.minipaintcompanion.data.AppData
+import com.carottejy.minipaintcompanion.data.groupOwners
+import com.carottejy.minipaintcompanion.data.groupSizes
+import androidx.compose.material.icons.outlined.KeyboardArrowDown
+import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import com.carottejy.minipaintcompanion.data.Repository
 
 @OptIn(ExperimentalMaterial3Api::class, androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
@@ -65,6 +69,7 @@ fun ProjectDetailScreen(
     var confirmDelete by remember { mutableStateOf(false) }
     var fullPhoto by remember { mutableStateOf(false) }
     var sharing by remember { mutableStateOf(false) }
+    var collapsed by remember { mutableStateOf(emptySet<String>()) }
 
     Scaffold(
         topBar = {
@@ -181,18 +186,45 @@ fun ProjectDetailScreen(
                 }
             }
 
+            val owners = project.steps.groupOwners()
+            val sizes = project.steps.groupSizes()
             itemsIndexed(project.steps, key = { _, s -> s.id }) { position, step ->
                 if (step.group) {
-                    // En-tête de groupe
-                    Text(
-                        step.title.ifBlank { "Groupe" }.uppercase(),
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 10.dp),
-                    )
+                    // En-tête de groupe : touche pour replier / ouvrir
+                    val open = step.id !in collapsed
+                    val n = sizes[step.id] ?: 0
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 6.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f))
+                            .clickable { collapsed = if (open) collapsed + step.id else collapsed - step.id }
+                            .padding(horizontal = 8.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(
+                            if (open) Icons.Outlined.KeyboardArrowDown else Icons.AutoMirrored.Outlined.KeyboardArrowRight,
+                            contentDescription = if (open) "Replier" else "Ouvrir",
+                            tint = MaterialTheme.colorScheme.primary,
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            step.title.ifBlank { "Groupe" }.uppercase(),
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.weight(1f),
+                        )
+                        Text(
+                            "$n étape${if (n > 1) "s" else ""}",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                     return@itemsIndexed
                 }
+                if (owners[position] != null && owners[position] in collapsed) return@itemsIndexed
                 val index = project.steps.take(position).count { !it.group }
                 val isLast = project.steps.drop(position + 1).let { rest -> rest.isEmpty() || rest.first().group }
                 Row(Modifier.padding(horizontal = 16.dp).height(IntrinsicSize.Min)) {

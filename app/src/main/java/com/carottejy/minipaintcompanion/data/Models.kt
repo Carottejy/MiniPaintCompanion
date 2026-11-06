@@ -93,3 +93,42 @@ data class SharedSchema(
     val project: Project,
     val customPaints: List<Paint> = emptyList(),
 )
+
+/** Groupe auquel appartient chaque étape (id de l'en-tête), null hors groupe. */
+fun List<Step>.groupOwners(): List<String?> {
+    var current: String? = null
+    return map { s -> if (s.group) { current = s.id; null } else current }
+}
+
+/** Nombre d'étapes contenues dans chaque groupe. */
+fun List<Step>.groupSizes(): Map<String, Int> =
+    groupOwners().filterNotNull().groupingBy { it }.eachCount()
+
+/** Déplace un groupe avec toutes ses étapes d'un cran vers le haut (-1) ou le bas (+1). */
+fun List<Step>.moveGroup(groupId: String, delta: Int): List<Step> {
+    val owners = groupOwners()
+    val start = indexOfFirst { it.id == groupId }
+    if (start < 0) return this
+    var end = start + 1
+    while (end < size && owners[end] == groupId) end++
+    val block = subList(start, end)
+    val rest = toMutableList().apply { subList(start, end).clear() }
+    // Bloc voisin : un autre groupe entier ou une étape isolée.
+    val restOwners = rest.groupOwners()
+    val insertAt = if (delta < 0) {
+        if (start == 0) return this
+        val prev = start - 1
+        val prevOwner = restOwners[prev]
+        if (prevOwner != null) rest.indexOfFirst { it.id == prevOwner } else prev
+    } else {
+        if (start >= rest.size) return this
+        val next = start
+        if (rest[next].group) {
+            var e = next + 1
+            while (e < rest.size && restOwners[e] == rest[next].id) e++
+            e
+        } else next + 1
+    }
+    rest.addAll(insertAt, block)
+    return rest
+}
