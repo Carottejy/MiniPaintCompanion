@@ -469,6 +469,24 @@ private fun HomeScreen(
             onPaint = { p -> scanning = false; added(p, null) },
             onQr = { content ->
                 scanning = false
+                val digits = content.trim()
+                if (digits.length in 8..14 && digits.all { it.isDigit() }) {
+                    // Code-barres EAN / UPC
+                    val code = if (digits.length == 12) "0$digits" else digits
+                    val p = repo.paintForBarcode(code)
+                    if (p != null) {
+                        added(p, code)
+                    } else {
+                        choice = PaintChoice(
+                            title = "Code-barres inconnu",
+                            message = "Code $code. Choisis le pot correspondant : je retiendrai ce code pour les prochaines fois.",
+                            candidates = emptyList(),
+                            query = "",
+                            code = code,
+                        )
+                    }
+                    return@PaintScannerOverlay
+                }
                 val key = "qr:$content"
                 val learned = data.barcodes[key]?.let { id -> allPaints.firstOrNull { it.id == id } }
                 if (learned != null) {

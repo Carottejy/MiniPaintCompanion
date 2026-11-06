@@ -18,6 +18,63 @@ object Catalog {
         }.distinctBy { it.id }
     }
 
+    // ------------------------------------------------------------ codes-barres (EAN-13)
+
+    /** Ajoute la clé de contrôle EAN-13 à 12 chiffres. */
+    fun ean13(base12: String): String {
+        val sum = base12.mapIndexed { i, c -> (c - '0') * if (i % 2 == 0) 1 else 3 }.sum()
+        return base12 + ((10 - sum % 10) % 10)
+    }
+
+    /**
+     * Codes-barres d'un pot :
+     *  - Vallejo : 8429551 + référence à 5 chiffres (70.951 -> 70951) + clé ;
+     *  - Army Painter : 5713799 + numéro WP + 0 (ou 2 sur certains pots) + clé ;
+     *  - Citadel : relevés un par un chez les revendeurs (plusieurs codes selon l'étiquette).
+     * Vérifié sur des codes publiés (Vallejo 70.951 et 70.919, Army Painter WP3001, WP3012, WP3118, WP3199…).
+     */
+    fun barcodesFor(p: Paint): List<String> = when (p.brand) {
+        Brand.VALLEJO -> {
+            val digits = p.code.filter { it.isDigit() }
+            if (digits.length == 5) listOf(ean13("8429551$digits")) else emptyList()
+        }
+        Brand.ARMY_PAINTER -> {
+            val digits = p.code.removePrefix("WP").filter { it.isDigit() }
+            if (digits.length == 4) listOf("0", "2").map { ean13("5713799$digits$it") } else emptyList()
+        }
+        Brand.CITADEL -> CITADEL_EAN[p.name].orEmpty()
+        else -> emptyList()
+    }
+
+    /** Index code-barres -> identifiant du pot. */
+    val barcodeIndex: Map<String, String> by lazy {
+        buildMap { all.forEach { p -> barcodesFor(p).forEach { put(it, p.id) } } }
+    }
+
+    private val CITADEL_EAN: Map<String, List<String>> = mapOf(
+        "Abaddon Black" to listOf("5011921187720"),
+        "Corax White" to listOf("5011921188253", "5011921196791", "5011921121144"),
+        "Wraithbone" to listOf("5011921188260", "5011921121151"),
+        "Leadbelcher" to listOf("5011921187751", "5011921196401", "5011921026555"),
+        "Retributor Armour" to listOf("5011921187805", "5011921058808"),
+        "Macragge Blue" to listOf("5011921185986"),
+        "Mephiston Red" to listOf("5011921185931", "5011921026203"),
+        "Naggaroth Night" to listOf("5011921185955"),
+        "Castellan Green" to listOf("5011921186860"),
+        "Death Guard Green" to listOf("5011921187829"),
+        "Dryad Bark" to listOf("5011921026500"),
+        "White Scar" to listOf("5011921186754", "5011921027934", "5011921235285"),
+        "Russ Grey" to listOf("5011921186839"),
+        "Nurgling Green" to listOf("5011921186327", "5011921197361"),
+        "Ogryn Camo" to listOf("5011921027606"),
+        "Sotek Green" to listOf("5011921027224"),
+        "Nuln Oil" to listOf("5011921176557"),
+        "Agrax Earthshade" to listOf("5011921176441", "5011921068777"),
+        "Ultramarines Blue" to listOf("5011921185405"),
+        "Creed Camo" to listOf("5011921120802"),
+        "Plaguebearer Flesh" to listOf("5011921185696"),
+    )
+
     private fun parse(brand: Brand, range: String, data: String): List<Paint> =
         data.lines().map { it.trim() }.filter { it.isNotEmpty() }.map { line ->
             val (code, name, hex) = line.split("|").map { it.trim() }
@@ -427,61 +484,215 @@ object Catalog {
     )
 
     // ---------------------------------------------------------- Army Painter
+    // Gamme Warpaints Fanatic (références WP3xxx). Les teintes des pots ajoutés en 2026 sont
+    // estimées d'après le nom ; les anciens Warpaints sans équivalent restent sans référence.
     private val ARMY = listOf(
         "Warpaints" to """
-            |Matt Black|#1B1B1B
-            |Matt White|#F4F4F2
-            |Pure Red|#B81E1E
-            |Dragon Red|#8A1A1E
+            WP3012|Matt White|#F4F4F2
+            WP3001|Matt Black|#1B1B1B
+            WP3002|Deep Grey|#47494C
+            WP3003|Uniform Grey|#5A6266
+            WP3004|Ash Grey|#B8BCB4
+            WP3005|Company Grey|#777B7F
+            WP3006|Brigade Grey|#777B7F
+            WP3007|Grey Castle|#777B7F
+            WP3008|Gargoyle Grey|#777B7F
+            WP3009|Great Hall Grey|#B2B5B8
+            WP3010|Worn Stone|#B2B5B8
+            WP3011|Brainmatter Beige|#F8E5C4
+            WP3013|Night Sky|#172E54
+            WP3025|Imperial Navy|#172E54
+            WP3019|Triumphant Navy|#172E54
+            WP3026|Regal Blue|#172E54
+            WP3021|Ultramarine Blue|#2A4A8A
+            WP3020|Gothic Blue|#31528C
+            WP3027|Royal Blue|#31528C
+            WP3014|Thunderous Blue|#172E54
+            WP3015|Stratos Blue|#31528C
+            WP3016|Wolf Grey|#7A8A9A
+            WP3017|Runic Cobalt|#31528C
+            WP3018|Frost Blue|#7A97C8
+            WP3022|Alpha Blue|#7A97C8
+            WP3023|Baron Blue|#7A97C8
+            WP3024|Augur Blue|#7A97C8
+            WP3028|Crystal Blue|#2A6ABE
+            WP3029|Arctic Gem|#7A97C8
+            WP3030|Bright Sapphire|#31528C
+            WP3031|Deep Ocean Blue|#172E54
+            WP3032|Abyssal Blue|#172E54
+            WP3033|Tidal Blue|#31528C
+            WP3034|Phalanx Blue|#31528C
+            WP3035|Shieldwall Blue|#31528C
+            WP3036|Aegis Aqua|#388C8C
+            WP3037|Deep Azure|#172E54
+            WP3038|Hydra Turquoise|#1E8A8A
+            WP3039|Turquoise Siren|#388C8C
+            WP3040|Aquamarine|#388C8C
+            WP3041|Neptune Glow|#80C8C8
+            WP3042|Marine Mist|#80C8C8
+            WP3051|Greenskin|#4A8A2A
+            WP3053|Wild Green|#6A9F73
+            WP3054|Ferocious Green|#306B3A
+            WP3049|Angel Green|#1E4A2A
+            WP3050|Guardian Green|#306B3A
+            WP3055|Emerald Forest|#306B3A
+            WP3056|Leafy Green|#6A9F73
+            WP3057|Rainforest|#306B3A
+            WP3058|Electric Lime|#83BF2F
+            WP3059|Vivid Volt|#83BF2F
+            WP3060|Afterglow|#CFFF8C
+            WP3061|Evergreen Fog|#306B3A
+            WP3062|Medieval Forest|#306B3A
+            WP3063|Patagon Pine|#306B3A
+            WP3064|Autumn Sage|#606B40
+            WP3065|Forest Faun|#606B40
+            WP3066|Mossy Green|#606B40
+            WP3067|Woodland Camo|#606B40
+            WP3068|Army Green|#4E4A2E
+            WP3069|Camouflage Green|#606B40
+            WP3070|Olive Drab|#606B40
+            WP3071|Necrotic Flesh|#9AA07A
+            WP3072|Grotesque Green|#606B40
+            WP3109|Oak Brown|#4A3022
+            WP3110|Tree Ancient|#352215
+            WP3111|Dryad Brown|#593C28
+            WP3112|Fur Brown|#8A4A22
+            WP3073|Brigandine Brown|#593C28
+            WP3074|Bootstrap Brown|#593C28
+            WP3075|Leather Brown|#7A4A2A
+            WP3113|Ruddy Umber|#593C28
+            WP3114|Buffed Hide|#593C28
+            WP3076|Paratrooper Tan|#B29B74
+            WP3077|Command Khaki|#B29B74
+            WP3078|Urban Buff|#F8E5C4
+            WP3079|Tundra Taupe|#F8E5C4
+            WP3080|Prairie Ochre|#B29B74
+            WP3081|Desert Yellow|#B8964A
+            WP3082|Wasteland Clay|#B29B74
+            WP3083|Burnt Turf|#6B5B41
+            WP3084|Barren Dune|#B29B74
+            WP3085|Dusty Skull|#F8E5C4
+            WP3086|Tomb King Tan|#B29B74
+            WP3087|Skeleton Bone|#D9C69A
+            WP3088|Ancient Stone|#777B7F
+            WP3089|Boney Spikes|#F8E5C4
+            WP3090|Pale Sand|#F8E5C4
+            WP3093|Daemonic Yellow|#F5C431
+            WP3092|Fiendish Yellow|#E5C02D
+            WP3094|Warped Yellow|#E5C02D
+            WP3095|Space Dust|#FFE684
+            WP3096|Ice Yellow|#FFE684
+            WP3091|Demigod Flames|#E06D21
+            WP3097|Molten Lava|#E06D21
+            WP3098|Burning Ore|#E06D21
+            WP3099|Lava Orange|#E8641E
+            WP3100|Flickering Flame|#E06D21
+            WP3101|Glowing Inferno|#FFB07C
+            WP3102|Inner Light|#FFB07C
+            WP3117|Dragon Red|#8A1A1E
+            WP3118|Pure Red|#B81E1E
+            WP3115|Basilisk Red|#9E1F23
+            WP3116|Wyvern Fury|#593C28
+            WP3103|Resplendent Red|#9E1F23
+            WP3104|Angelic Red|#9E1F23
+            WP3105|Legendary Red|#9E1F23
+            WP3106|Sacred Scarlet|#9E1F23
+            WP3107|Violent Vermilion|#9E1F23
+            WP3108|Raging Rouge|#9E1F23
+            WP3119|Blood Chalice|#904446
+            WP3120|Raging Rose|#D17392
+            WP3121|Wicked Pink|#7D3F54
+            WP3122|Impish Rouge|#9E1F23
+            WP3123|Pixie Pink|#FFBAD1
+            WP3124|Weird Elixir|#D17392
+            WP3125|Pink Potion|#D17392
+            WP3126|Doomfire Drab|#394023
+            WP3127|Terrestrial Titan|#B29B74
+            WP3128|Alien Purple|#5A3A7A
+            WP3129|Cultist Purple|#3F2244
+            WP3130|Hexed Violet|#3F2244
+            WP3131|Violet Coven|#6A3F72
+            WP3132|Kraken Lavender|#6A3F72
+            WP3133|Diabolic Plum|#6A3F72
+            WP3134|Magecast Magenta|#6A3F72
+            WP3135|Warlock Magenta|#6A3F72
+            WP3136|Spellbound Fuchsia|#6A3F72
+            WP3137|Enchanted Pink|#FFBAD1
+            WP3138|Diviner Light|#A17BA8
+            WP3139|Mulled Berry|#3F2244
+            WP3140|Moldy Wine|#3F2244
+            WP3141|Elder Flower|#A17BA8
+            WP3142|Forbidden Fruit|#6A3F72
+            WP3143|Figgy Pink|#D17392
+            WP3144|Wilted Rose|#D17392
+            WP3147|Barbarian Flesh|#D9A07A
+            WP3145|Moonstone Skin|#B2B5B8
+            WP3146|Agate Skin|#BF9176
+            WP3148|Ruby Skin|#9E1F23
+            WP3149|Opal Skin|#BF9176
+            WP3150|Pearl Skin|#FFDAC4
+            WP3151|Carnelian Skin|#9E1F23
+            WP3152|Tiger's Eye|#BF9176
+            WP3153|Topaz Skin|#BF9176
+            WP3154|Jasper Skin|#BF9176
+            WP3155|Tourmaline Skin|#BF9176
+            WP3156|Leopard Stone Skin|#47494C
+            WP3157|Obsidian Skin|#725442
+            WP3158|Onyx Skin|#725442
+            WP3159|Mocca Skin|#352215
+            WP3160|Amber Skin|#BF9176
+            WP3161|Dorado Skin|#BF9176
+            WP3162|Quartz Skin|#FFDAC4
+            WP3192|Plate Mail Metal|#9A9EA2
+            WP3191|Shining Silver|#C0C4C8
+            WP3190|Mithril|#D0D4D8
+            WP3181|Rough Iron|#5A4A44
+            WP3193|Gun Metal|#5A5E62
+            WP3185|Evil Chrome|#B8BEC6
+            WP3194|Cobalt Metal|#4A6A9A
+            WP3195|Death Metal|#3A3C40
+            WP3188|Greedy Gold|#C8A040
+            WP3189|Bright Gold|#D4B04A
+            WP3187|Tainted Gold|#9A7A3A
+            WP3183|Weapon Bronze|#8A6A3A
+            WP3184|True Copper|#A8643A
+            WP3182|Red Copper|#8A4A32
+            WP3186|True Brass|#B08A3A
+            WP3196|Dark Emerald|#1E5A3A
+            WP3197|Glittering Green|#3A8A4A
+            WP3198|Gemstone Red|#8A1A22
             |Chaotic Red|#6E1A1E
-            |Lava Orange|#E8641E
-            |Daemonic Yellow|#F5C431
-            |Desert Yellow|#B8964A
-            |Greenskin|#4A8A2A
             |Goblin Green|#5A9A3A
-            |Angel Green|#1E4A2A
-            |Army Green|#4E4A2E
             |Elf Green|#3E7A3A
-            |Necrotic Flesh|#9AA07A
-            |Hydra Turquoise|#1E8A8A
             |Electric Blue|#6AB4DE
-            |Crystal Blue|#2A6ABE
-            |Ultramarine Blue|#2A4A8A
             |Deep Blue|#1E2A4A
-            |Alien Purple|#5A3A7A
             |Warlock Purple|#8A2A5A
-            |Wolf Grey|#7A8A9A
-            |Uniform Grey|#5A6266
-            |Ash Grey|#B8BCB4
-            |Skeleton Bone|#D9C69A
             |Kobold Skin|#C8A46A
-            |Barbarian Flesh|#D9A07A
             |Tanned Flesh|#9A5E3E
-            |Leather Brown|#7A4A2A
-            |Oak Brown|#4A3022
-            |Fur Brown|#8A4A22
             |Monster Brown|#7A6A3A
             |Mummy Robes|#E8DFC4
             |Hardened Carapace|#6A3A2A
-            |Plate Mail Metal|#9A9EA2
-            |Gun Metal|#5A5E62
-            |Shining Silver|#C0C4C8
-            |Greedy Gold|#C8A040
-            |Bright Gold|#D4B04A
-            |Weapon Bronze|#8A6A3A
-            |True Copper|#A8643A
-            |Rough Iron|#5A4A44
         """,
         "Quickshade Wash" to """
-            |Dark Tone|#14100E
-            |Strong Tone|#4A3022
-            |Soft Tone|#8A6A3E
-            |Red Tone|#6E1A1E
-            |Green Tone|#1E4F2A
-            |Blue Tone|#1B3A5E
-            |Purple Tone|#4A2A55
+            WP3199|Dark Tone|#14100E
+            WP3200|Strong Tone|#4A3022
+            WP3201|Soft Tone|#8A6A3E
+            WP3202|Light Tone|#B89A6A
+            WP3203|Sepia Tone|#7A4E22
+            WP3204|Rust Tone|#7A3A1E
+            WP3205|Dark Red Tone|#4A1418
+            WP3206|Red Tone|#6E1A1E
+            WP3207|Orange Tone|#9B4A1E
+            WP3208|Green Tone|#1E4F2A
+            WP3209|Military Shader|#4A4A2A
+            WP3210|Blue Tone|#1B3A5E
+            WP3211|Dark Blue Tone|#141E3A
+            WP3212|Purple Tone|#4A2A55
+            WP3213|Magenta Tone|#6A1A4A
+            WP3214|Strong Skin Shade|#7A3E2A
+            WP3215|Dark Skin Shade|#4A2418
+            WP3216|Wash Medium|#EDEDED
             |Flesh Wash|#8A4A2E
-            |Military Shader|#4A4A2A
         """,
         "Speedpaint" to """
             |Grim Black|#1C1C1C

@@ -1,4 +1,9 @@
 ## @VERSION@ — @DATE@
+- Les codes-barres des pots sont maintenant dans le catalogue : tous les Vallejo et Army Painter (calculés d'après la référence), et les 21 Citadel les plus courants. Le mode « Code-barres / QR » les reconnaît directement.
+- Catalogue Army Painter mis à jour avec la gamme Warpaints Fanatic : 192 pots avec leur référence WP (teintes des nouveaux pots estimées).
+- La recherche du catalogue accepte un code-barres (ou le début d'un code).
+
+## 1.0.17 — 06/11/2026
 - Le lecteur de codes-barres est remplacé par « Identifier un pot », avec deux options :
 - Étiquette : la caméra lit le nom ou la référence imprimés sur le pot et propose les pots correspondants (fonctionne hors ligne, marche aussi avec une photo existante) ;
 - QR code : lit un QR code (fiche produit, étiquette perso) ; le pot choisi est mémorisé pour les fois suivantes.

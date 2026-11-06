@@ -96,6 +96,9 @@ class Repository private constructor(context: Context) {
         val code = if (digits.length == 12) "0$digits" else digits
         val all = allPaints(d)
         d.barcodes[code]?.let { id -> all.firstOrNull { it.id == id }?.let { return it } }
+        // Codes du catalogue (y compris la variante sans le 0 initial d'un UPC)
+        (Catalog.barcodeIndex[code] ?: Catalog.barcodeIndex[code.removePrefix("0")])
+            ?.let { id -> all.firstOrNull { it.id == id }?.let { return it } }
         if (code.length == 13 && code.startsWith("8429551")) {
             val ref = code.substring(7, 12) // ex. 70951
             val formatted = ref.substring(0, 2) + "." + ref.substring(2) // 70.951

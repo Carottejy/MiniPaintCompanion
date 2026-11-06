@@ -88,7 +88,7 @@ import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 
-enum class ScanMode(val label: String) { LABEL("Étiquette"), QR("QR code") }
+enum class ScanMode(val label: String) { LABEL("Étiquette"), QR("Code-barres / QR") }
 
 /** Transforme le contenu d'un QR code (souvent une URL produit) en texte exploitable. */
 fun qrToText(content: String): String =
@@ -99,7 +99,8 @@ fun qrToText(content: String): String =
 /**
  * Identification d'un pot, plein écran :
  *  - Étiquette : la caméra lit le texte du pot (nom, référence) et propose les pots correspondants ;
- *  - QR code : lit un QR code (pot, fiche produit) ; le pot associé est ensuite mémorisé.
+ *  - Code-barres / QR : EAN des pots (codes du catalogue Vallejo, Army Painter, Citadel courants)
+ *    ou QR code ; un code inconnu est mémorisé une fois le pot choisi.
  */
 @Composable
 fun PaintScannerOverlay(
@@ -192,7 +193,7 @@ fun PaintScannerOverlay(
             }
             Text(
                 if (mode == ScanMode.LABEL) "Cadre le nom ou la référence du pot, bien éclairé."
-                else "Vise le QR code.",
+                else "Vise le code-barres (sous le pot ou sur l'étiquette) ou le QR code.",
                 color = Color.White,
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier
@@ -272,7 +273,14 @@ private fun LiveCamera(
     val lastOcr = remember { longArrayOf(0L) }
     val executor = remember { Executors.newSingleThreadExecutor() }
     val qrScanner = remember {
-        BarcodeScanning.getClient(BarcodeScannerOptions.Builder().setBarcodeFormats(Barcode.FORMAT_QR_CODE).build())
+        BarcodeScanning.getClient(
+            BarcodeScannerOptions.Builder()
+                .setBarcodeFormats(
+                    Barcode.FORMAT_EAN_13, Barcode.FORMAT_EAN_8, Barcode.FORMAT_UPC_A, Barcode.FORMAT_UPC_E,
+                    Barcode.FORMAT_QR_CODE,
+                )
+                .build()
+        )
     }
 
     DisposableEffect(lifecycleOwner) {

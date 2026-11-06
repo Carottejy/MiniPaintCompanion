@@ -19,8 +19,12 @@ Les données restent sur le téléphone (fichier JSON + photos dans l'espace pri
 ## Identifier un pot
 
 Caméra intégrée (CameraX), deux modes :
-- **Étiquette** : reconnaissance de texte ML Kit embarquée (hors ligne), une image toutes les 0,7 s ; le texte est rapproché du catalogue (`VoiceParser.candidates` : noms tolérants aux erreurs de lecture, marque et gamme lues sur l'étiquette, références Vallejo). Fonctionne aussi sur une photo de la galerie.
-- **QR code** : le contenu (souvent une URL produit) est analysé de la même façon ; le pot choisi est mémorisé (`qr:<contenu>`) et inclus dans la sauvegarde.
+- **Étiquette** : reconnaissance de texte ML Kit embarquée (hors ligne) ; le texte est rapproché du catalogue (`VoiceParser.candidates`). Fonctionne aussi sur une photo de la galerie.
+- **Code-barres / QR** : EAN-13/8, UPC et QR. Codes du catalogue (`Catalog.barcodesFor`) :
+  - Vallejo : `8429551` + référence sur 5 chiffres + clé (ex. 70.951 → 8429551709514) ;
+  - Army Painter Warpaints Fanatic : `5713799` + numéro WP + `0` (ou `2`, ex. WP3001) + clé ;
+  - Citadel : pas de règle, 21 pots courants relevés chez les revendeurs (plusieurs codes selon l'étiquette).
+  Un code inconnu est associé au pot choisi puis mémorisé (inclus dans la sauvegarde).
 
 ## Mise à jour automatique
 

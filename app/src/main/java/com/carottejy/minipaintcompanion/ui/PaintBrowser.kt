@@ -78,7 +78,8 @@ fun PaintBrowser(
             (brand == null || p.brand == brand) &&
                 (range == null || p.range == range) &&
                 (!onlyOwned || p.id in ownedIds) &&
-                (q.isEmpty() || normalize(p.name + p.code + p.range + p.brand.label).contains(q))
+                (q.isEmpty() || normalize(p.name + p.code + p.range + p.brand.label).contains(q) ||
+                    (q.length >= 6 && q.all { it.isDigit() } && Catalog.barcodesFor(p).any { it.contains(q) }))
         }
     }
     val groups = remember(filtered) { filtered.groupBy { "${it.brand.shortLabel()} · ${it.range}" } }
@@ -87,7 +88,7 @@ fun PaintBrowser(
         OutlinedTextField(
             value = query,
             onValueChange = { query = it },
-            placeholder = { Text("Rechercher un pot, une référence…") },
+            placeholder = { Text("Nom, référence ou code-barres…") },
             leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
             trailingIcon = {
                 if (query.isNotEmpty()) IconButton(onClick = { query = "" }) {
