@@ -16,6 +16,7 @@ object Catalog {
             ARMY.forEach { (range, data) -> addAll(parse(Brand.ARMY_PAINTER, range, data)) }
             PRINCE.forEach { (range, data) -> addAll(parse(Brand.PRINCE_AUGUST, range, data)) }
             AK.forEach { (range, data) -> addAll(parse(Brand.AK, range, data)) }
+            SCALE75.forEach { (range, data) -> addAll(parse(Brand.SCALE75, range, data)) }
         }.distinctBy { it.id }
     }
 
@@ -45,6 +46,8 @@ object Catalog {
             if (digits.length == 4) listOf("0", "2").map { ean13("5713799$digits$it") } else emptyList()
         }
         Brand.CITADEL -> if (isPrimer(p)) emptyList() else CITADEL_EAN[p.name].orEmpty()
+        // Scale75 : pas de numérotation régulière, codes relevés un par un.
+        Brand.SCALE75 -> SCALE75_EAN[p.code].orEmpty()
         Brand.AK -> {
             // 843556830 + (référence − 10767) + clé, vérifié sur AK11044, 11049, 11050, 11056 et 11087.
             val n = p.code.removePrefix("AK").toIntOrNull()
@@ -77,6 +80,14 @@ object Catalog {
     val barcodeIndex: Map<String, String> by lazy {
         buildMap { all.forEach { p -> barcodesFor(p).forEach { put(it, p.id) } } }
     }
+
+    private val SCALE75_EAN: Map<String, List<String>> = mapOf(
+        "SC-20" to listOf("8412548247151"),
+        "SC-23" to listOf("8412548247182"),
+        "SC-25" to listOf("8412548248110"),
+        "SC-41" to listOf("8412548251417"),
+        "SC-56" to listOf("8412548252087"),
+    )
 
     private val CITADEL_EAN: Map<String, List<String>> = mapOf(
         "Abaddon Black" to listOf("5011921187720"),
@@ -1010,6 +1021,76 @@ object Catalog {
             AK11228|Night Blue Ink|#141E3A
             AK11229|Burnt Umber Ink|#4A3022
             AK11230|Titanium White|#FAFAF8
+        """,
+    )
+
+    // --------------------------------------------------------------- Scale75
+    // Gamme Scalecolor (SC-00 à SC-62, d'après la charte officielle). Teintes approximatives.
+    private val SCALE75 = listOf(
+        "Scalecolor" to """
+            SC-00|Black|#141414
+            SC-01|White|#F6F6F2
+            SC-02|Nacar|#E8E2D6
+            SC-03|Graphite|#3A3C40
+            SC-04|Anthracite Grey|#4A4E52
+            SC-05|Arctic Blue|#C8DCE6
+            SC-06|Bering Blue|#8AA8BC
+            SC-07|Caspian Blue|#4A6A84
+            SC-08|Abyssal Blue|#1E2E40
+            SC-09|White Sands|#EDE3C8
+            SC-10|Tenere Yellow|#E2C88A
+            SC-11|Sahara Yellow|#C8A060
+            SC-12|Gobi Brown|#9A7444
+            SC-13|Dubai Brown|#6E4E2E
+            SC-14|Kalahari Orange|#B06A2E
+            SC-15|Adriatic Blue|#5A7A8E
+            SC-16|Eclipse Grey|#2E3236
+            SC-17|Pale Skin|#F0D2BC
+            SC-18|Light Skin|#E6B89A
+            SC-19|Golden Skin|#D9A47A
+            SC-20|Basic Flesh|#C88A64
+            SC-21|Pink Flesh|#D8968A
+            SC-22|Arabic Shadow|#8E5A44
+            SC-23|Indian Shadow|#7D454E
+            SC-24|African Shadow|#4E2E26
+            SC-25|Birch|#D6BE92
+            SC-26|Sandalwood|#B08A5A
+            SC-27|Iroko|#8A5A30
+            SC-28|Orange Leather|#A85A2A
+            SC-29|Walnut|#5A3A22
+            SC-30|Red Leather|#7A2E22
+            SC-31|Brown Leather|#5E3A26
+            SC-32|Black Leather|#2E2420
+            SC-33|Sunset Purple|#6A2A4A
+            SC-34|Fuchsia|#B8306A
+            SC-35|Deep Red|#7A141E
+            SC-36|Blood Red|#9A1A1E
+            SC-37|Antares Red|#C42A22
+            SC-38|Aldebaran Red|#E04A2A
+            SC-39|Mars Orange|#E8742A
+            SC-40|Sol Yellow|#F2C82A
+            SC-41|Black Forest Green|#1A3D1C
+            SC-42|Boreal Green|#2E5A2E
+            SC-43|Irati Green|#4A7A3A
+            SC-44|Sherwood Green|#7A9A4A
+            SC-45|Ardennes Green|#4A5034
+            SC-46|Field Grey|#6A6E5A
+            SC-47|Spring Green|#9AC060
+            SC-48|Fall Green|#8A8A3A
+            SC-49|Caribbean Blue|#2A8A9A
+            SC-50|Sky Blue|#7AB0D4
+            SC-51|Mediterranean Blue|#2A6AA0
+            SC-52|Tesla Blue|#3A84C4
+            SC-53|Cantabric Blue|#2A4A6A
+            SC-54|Navy Blue|#1E2A54
+            SC-55|Deep Blue|#141E3A
+            SC-56|Violet|#4A2A6A
+            SC-57|Petroleum Grey|#3A4A4E
+            SC-58|Graphene Grey|#5A5E62
+            SC-59|Brown Grey|#6A5E52
+            SC-60|Rainy Grey|#9AA0A2
+            SC-61|Thar Brown|#7A5A3E
+            SC-62|Mojave White|#E8DCC4
         """,
     )
 

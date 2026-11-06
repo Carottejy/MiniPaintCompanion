@@ -48,6 +48,7 @@ object VoiceParser {
         Brand.ARMY_PAINTER to listOf("army painter", "army"),
         Brand.PRINCE_AUGUST to listOf("prince august", "prince auguste"),
         Brand.AK to listOf("ak interactive", "3rd gen", "3 gen", "3g"),
+        Brand.SCALE75 to listOf("scale75", "scale 75", "scalecolor", "scale color"),
     )
 
     private val NOTE_KEYWORDS = Regex("""\b(?:note|notes|remarque|astuce|attention)\b\s*:?\s*""", RegexOption.IGNORE_CASE)
@@ -187,7 +188,7 @@ object VoiceParser {
         "base" to "Base", "layer" to "Layer", "shade" to "Shade", "contrast" to "Contrast",
         "dry" to "Dry", "technical" to "Technical", "model color" to "Model Color", "game color" to "Game Color",
         "model air" to "Model Air", "xpress" to "Xpress Color", "speedpaint" to "Speedpaint",
-        "warpaints" to "Warpaints", "fanatic" to "Warpaints", "3rd gen" to "3rd Gen", "primer" to "Primer", "spray" to "Spray", "quickshade" to "Quickshade Wash", "wash" to "Wash",
+        "warpaints" to "Warpaints", "fanatic" to "Warpaints", "3rd gen" to "3rd Gen", "scalecolor" to "Scalecolor", "primer" to "Primer", "spray" to "Spray", "quickshade" to "Quickshade Wash", "wash" to "Wash",
     )
 
     /**

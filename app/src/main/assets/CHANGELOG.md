@@ -1,4 +1,7 @@
 ## @VERSION@ — @DATE@
+- Nouveau catalogue Scale75 Scalecolor : les 63 couleurs (SC-00 à SC-62), reconnues aussi à la lecture d'étiquette et à la dictée.
+
+## 1.0.20 — 06/11/2026
 - Nouvelle étape suggérée : « Lining » (aussi reconnue à la dictée : « lining », « filets »).
 
 ## 1.0.19 — 06/11/2026

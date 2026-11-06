@@ -73,6 +73,7 @@ fun Brand.shortLabel(): String = when (this) {
     Brand.ARMY_PAINTER -> "Army Painter"
     Brand.PRINCE_AUGUST -> "Prince August"
     Brand.AK -> "AK"
+    Brand.SCALE75 -> "Scale75"
     Brand.CUSTOM -> "Perso"
 }
 

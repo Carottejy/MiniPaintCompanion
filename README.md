@@ -8,7 +8,7 @@ Carnet de peinture de figurines pour Android.
 - **Mes peintures** : les pots que tu possèdes, cochés depuis le catalogue ou **identifiés à la caméra** (étiquette ou QR code) ; pots perso pour les autres marques. Un pot presque vide se marque « à racheter ».
 - **Achat** : la liste des pots à acheter/racheter (depuis la collection, le catalogue, une réalisation ou l'onglet Couleurs). Cocher un pot acheté — ou le scanner — le fait passer dans la collection. Liste partageable.
 - **Théorie** : roue chromatique du peintre (RJB) ou de la lumière (RVB), harmonies (complémentaire, adjacentes, analogue, triade, rectangle, carré, camaïeu) et ombre/lumière ; pour chaque couleur, les pots du catalogue ou de ta collection les plus proches (écart ΔE en L*a*b*).
-- **Catalogue** (onglet) : Citadel (dont bombes), Vallejo (Model Color, Game Color, Model Air, Xpress, lavis, Surface Primer), The Army Painter (Warpaints Fanatic, Quickshade, Speedpaint, bombes), AK Interactive (3rd Generation, primers), Prince August — recherche par nom ou référence, filtres marque/gamme.
+- **Catalogue** (onglet) : Citadel (dont bombes), Vallejo (Model Color, Game Color, Model Air, Xpress, lavis, Surface Primer), The Army Painter (Warpaints Fanatic, Quickshade, Speedpaint, bombes), AK Interactive (3rd Generation, primers), Scale75 (Scalecolor), Prince August — recherche par nom ou référence, filtres marque/gamme.
 
 - **Sauvegarde / restauration** (menu ⋮) : exporte toutes les réalisations, photos, la collection et les pots perso dans un `.zip` (Drive, Téléchargements…), et le réimporte sur un autre téléphone.
 

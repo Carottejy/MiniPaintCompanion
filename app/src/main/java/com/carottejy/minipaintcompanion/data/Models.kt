@@ -8,6 +8,7 @@ enum class Brand(val label: String) {
     ARMY_PAINTER("The Army Painter"),
     PRINCE_AUGUST("Prince August"),
     AK("AK Interactive"),
+    SCALE75("Scale75"),
     CUSTOM("Perso"),
 }
 
