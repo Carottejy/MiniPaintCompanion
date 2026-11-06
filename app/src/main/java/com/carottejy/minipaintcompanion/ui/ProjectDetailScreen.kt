@@ -122,7 +122,7 @@ fun ProjectDetailScreen(
             }
 
             // Récapitulatif des pots
-            val used = project.steps.flatMap { it.paintIds }.distinct().mapNotNull { paintsById[it] }
+            val used = project.steps.flatMap { it.allPaintIds }.distinct().mapNotNull { paintsById[it] }
             if (used.isNotEmpty()) {
                 item {
                     val missing = used.count { it.id !in data.ownedPaintIds }
@@ -181,8 +181,20 @@ fun ProjectDetailScreen(
                 }
             }
 
-            itemsIndexed(project.steps, key = { _, s -> s.id }) { index, step ->
-                val isLast = index == project.steps.lastIndex
+            itemsIndexed(project.steps, key = { _, s -> s.id }) { position, step ->
+                if (step.group) {
+                    // En-tête de groupe
+                    Text(
+                        step.title.ifBlank { "Groupe" }.uppercase(),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 10.dp),
+                    )
+                    return@itemsIndexed
+                }
+                val index = project.steps.take(position).count { !it.group }
+                val isLast = project.steps.drop(position + 1).let { rest -> rest.isEmpty() || rest.first().group }
                 Row(Modifier.padding(horizontal = 16.dp).height(IntrinsicSize.Min)) {
                     // Fil de la chronologie
                     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(36.dp).fillMaxHeight()) {
@@ -216,6 +228,24 @@ fun ProjectDetailScreen(
                         }
                         step.paintIds.mapNotNull { paintsById[it] }.forEach { p ->
                             PaintLine(p, owned = p.id in data.ownedPaintIds)
+                        }
+                        step.mixes.forEach { mix ->
+                            val a = paintsById[mix.paintA]
+                            val b = paintsById[mix.paintB]
+                            if (a != null && b != null) {
+                                Row(Modifier.padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    PaintSwatch(com.carottejy.minipaintcompanion.data.ColorTheory.mixHex(a.hex, b.hex, mix.ratioA), 28.dp)
+                                    Spacer(Modifier.width(12.dp))
+                                    Column(Modifier.weight(1f)) {
+                                        Text("Mélange ${ratioLabel(mix.ratioA)}", style = MaterialTheme.typography.bodyLarge)
+                                        Text(
+                                            "${mix.ratioA} % ${a.displayName} + ${mix.ratioB} % ${b.displayName}",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    }
+                                }
+                            }
                         }
                         if (step.notes.isNotBlank()) {
                             Text(

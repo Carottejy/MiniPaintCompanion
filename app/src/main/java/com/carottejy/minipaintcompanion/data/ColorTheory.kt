@@ -136,6 +136,16 @@ object ColorTheory {
     fun deltaE(a: FloatArray, b: FloatArray): Float =
         sqrt((a[0] - b[0]).pow(2) + (a[1] - b[1]).pow(2) + (a[2] - b[2]).pow(2))
 
+    /** Teinte approximative d'un mélange (moyenne pondérée en lumière linéaire). */
+    fun mixHex(hexA: String, hexB: String, ratioA: Int): String {
+        val (r1, g1, b1) = hexToRgb(hexA)
+        val (r2, g2, b2) = hexToRgb(hexB)
+        val t = ratioA.coerceIn(0, 100) / 100.0
+        fun lin(c: Int) = (c / 255.0).pow(2.2)
+        fun mix(a: Int, b: Int) = ((lin(a) * t + lin(b) * (1 - t)).pow(1 / 2.2) * 255).toInt()
+        return rgbToHex(mix(r1, r2), mix(g1, g2), mix(b1, b2))
+    }
+
     // ---------------------------------------------------------------- harmonies
 
     fun harmony(baseHex: String, harmony: Harmony, wheel: Wheel): List<SwatchColor> {

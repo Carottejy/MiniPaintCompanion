@@ -59,7 +59,7 @@ fun ProjectsScreen(
         modifier = modifier.fillMaxSize(),
     ) {
         item(span = { GridItemSpan(maxLineSpan) }) {
-            val paintsUsed = data.projects.flatMap { p -> p.steps.flatMap { it.paintIds } }.distinct().size
+            val paintsUsed = data.projects.flatMap { p -> p.steps.flatMap { it.allPaintIds } }.distinct().size
             Text(
                 "${data.projects.size} schéma${if (data.projects.size > 1) "s" else ""} · $paintsUsed pots utilisés",
                 style = MaterialTheme.typography.bodyMedium,

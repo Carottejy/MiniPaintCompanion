@@ -1,4 +1,8 @@
 ## @VERSION@ — @DATE@
+- Groupes d'étapes (optionnels) : un simple titre (« Armure », « Peau », « Socle »…) qui regroupe les étapes suivantes, dans l'éditeur, la fiche et le partage.
+- Mélanges : une étape peut contenir des mélanges de deux pots avec un ratio réglable (de 5/95 à 95/5, affiché aussi en 1:1, 2:1…) et un aperçu de la teinte obtenue.
+
+## 1.0.21 — 06/11/2026
 - Nouveau catalogue Scale75 Scalecolor : les 63 couleurs (SC-00 à SC-62), reconnues aussi à la lecture d'étiquette et à la dictée.
 
 ## 1.0.20 — 06/11/2026

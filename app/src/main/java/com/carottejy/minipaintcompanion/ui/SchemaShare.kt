@@ -40,8 +40,13 @@ fun schemaAsText(project: Project, data: AppData, repo: Repository): String {
     return buildString {
         appendLine("🎨 ${project.name.ifBlank { "Schéma sans titre" }}")
         if (project.notes.isNotBlank()) appendLine(project.notes)
-        project.steps.forEachIndexed { i, s ->
+        var i = 0
+        project.steps.forEach { s ->
             appendLine()
+            if (s.group) {
+                appendLine("— ${s.title.ifBlank { "Groupe" }.uppercase()} —")
+                return@forEach
+            }
             val title = s.title.ifBlank { "Étape ${i + 1}" }
             val extra = buildList {
                 add(s.technique.label.lowercase())
@@ -51,7 +56,12 @@ fun schemaAsText(project: Project, data: AppData, repo: Repository): String {
             s.paintIds.mapNotNull { byId[it] }.forEach { p ->
                 appendLine("   • ${p.brand.shortLabel()} ${p.displayName}")
             }
+            s.mixes.forEach { m ->
+                val a = byId[m.paintA]; val b = byId[m.paintB]
+                if (a != null && b != null) appendLine("   • Mélange ${m.ratioA} % ${a.displayName} + ${m.ratioB} % ${b.displayName}")
+            }
             if (s.notes.isNotBlank()) appendLine("   ${s.notes}")
+            i++
         }
         appendLine()
         append("Partagé avec MiniPaintCompanion")

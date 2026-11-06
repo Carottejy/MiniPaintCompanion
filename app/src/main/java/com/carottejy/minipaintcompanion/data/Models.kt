@@ -43,7 +43,24 @@ data class Step(
     val dilution: Int = 0,
     /** Étape de sous-couche : les pots se choisissent dans la liste dédiée. */
     val primer: Boolean = false,
-)
+    /** Mélanges de deux pots. */
+    val mixes: List<Mix> = emptyList(),
+    /** En-tête de groupe : seul le titre compte ; regroupe les étapes qui suivent. */
+    val group: Boolean = false,
+) {
+    /** Tous les pots de l'étape, y compris ceux des mélanges. */
+    val allPaintIds: List<String> get() = (paintIds + mixes.flatMap { listOf(it.paintA, it.paintB) }).distinct()
+}
+
+/** Mélange de deux pots : [ratioA] % du premier, le reste du second. */
+@Serializable
+data class Mix(
+    val paintA: String,
+    val paintB: String,
+    val ratioA: Int = 50,
+) {
+    val ratioB: Int get() = 100 - ratioA
+}
 
 @Serializable
 data class Project(

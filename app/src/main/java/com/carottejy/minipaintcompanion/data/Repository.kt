@@ -257,7 +257,7 @@ class Repository private constructor(context: Context) {
     suspend fun exportSchema(projectId: String): File = withContext(Dispatchers.IO) {
         val d = _data.value
         val project = d.projects.first { it.id == projectId }
-        val used = project.steps.flatMap { it.paintIds }.toSet()
+        val used = project.steps.flatMap { it.allPaintIds }.toSet()
         val payload = SharedSchema(
             project = project.copy(photo = project.photo?.let { "photo.jpg" }),
             customPaints = d.customPaints.filter { it.id in used },

@@ -71,7 +71,7 @@ fun CollectionScreen(
     val all = remember(data) { repo.allPaints(data) }
     val owned = remember(all, data.ownedPaintIds) { all.filter { it.id in data.ownedPaintIds } }
     val usage = remember(data.projects) {
-        data.projects.flatMap { p -> p.steps.flatMap { it.paintIds }.distinct().map { it to p } }
+        data.projects.flatMap { p -> p.steps.flatMap { it.allPaintIds }.distinct().map { it to p } }
             .groupBy({ it.first }, { it.second })
     }
     var selected by remember { mutableStateOf<Paint?>(null) }

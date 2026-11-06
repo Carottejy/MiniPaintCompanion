@@ -83,6 +83,13 @@ import com.carottejy.minipaintcompanion.data.AppData
 import com.carottejy.minipaintcompanion.data.Project
 import com.carottejy.minipaintcompanion.data.Repository
 import com.carottejy.minipaintcompanion.data.Step
+import com.carottejy.minipaintcompanion.data.Mix
+import com.carottejy.minipaintcompanion.data.Paint
+import com.carottejy.minipaintcompanion.data.ColorTheory
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.material.icons.outlined.Blender
+import androidx.compose.material.icons.outlined.ViewAgenda
 import com.carottejy.minipaintcompanion.data.Technique
 import kotlinx.coroutines.launch
 import java.io.File
@@ -124,6 +131,8 @@ fun ProjectEditorScreen(
     var pendingPhoto by rememberSaveable { mutableStateOf<String?>(null) }
     var pickingStepId by rememberSaveable { mutableStateOf<String?>(null) }
     var managingPrimers by remember { mutableStateOf(false) }
+    // Choix d'un pot de mélange : "idÉtape|indexMélange (-1 = nouveau)|A ou B|pot A déjà choisi"
+    var mixPick by rememberSaveable { mutableStateOf<String?>(null) }
     var confirmDiscard by remember { mutableStateOf(false) }
 
     // ---------------------------------------------------------------- dictée vocale
@@ -313,26 +322,40 @@ fun ProjectEditorScreen(
                 )
             }
             itemsIndexed(draft.steps, key = { _, s -> s.id }) { index, step ->
+                val onMove: (Int) -> Unit = { delta ->
+                    update { p ->
+                        val list = p.steps.toMutableList()
+                        val target = index + delta
+                        if (target in list.indices) {
+                            val tmp = list[index]; list[index] = list[target]; list[target] = tmp
+                        }
+                        p.copy(steps = list)
+                    }
+                }
+                if (step.group) {
+                    GroupHeaderCard(
+                        step = step,
+                        canUp = index > 0,
+                        canDown = index < draft.steps.lastIndex,
+                        onTitle = { v -> updateStep(step.id) { it.copy(title = v) } },
+                        onMove = onMove,
+                        onDelete = { update { p -> p.copy(steps = p.steps.filterNot { it.id == step.id }) } },
+                    )
+                    return@itemsIndexed
+                }
                 StepEditorCard(
-                    index = index,
+                    index = draft.steps.take(index).count { !it.group },
+                    position = index,
                     count = draft.steps.size,
                     step = step,
                     data = data,
                     repo = repo,
                     onChange = { f -> updateStep(step.id, f) },
-                    onMove = { delta ->
-                        update { p ->
-                            val list = p.steps.toMutableList()
-                            val target = index + delta
-                            if (target in list.indices) {
-                                val tmp = list[index]; list[index] = list[target]; list[target] = tmp
-                            }
-                            p.copy(steps = list)
-                        }
-                    },
+                    onMove = onMove,
                     onDelete = { update { p -> p.copy(steps = p.steps.filterNot { it.id == step.id }) } },
                     onPickPaints = { pickingStepId = step.id },
                     onDictate = { dictate(step.id) },
+                    onPickMix = { mixIndex, slot -> mixPick = "${step.id}|$mixIndex|$slot|" },
                 )
             }
             item {
@@ -345,12 +368,20 @@ fun ProjectEditorScreen(
                         modifier = Modifier.weight(1f),
                     ) {
                         Icon(Icons.Default.Add, contentDescription = null)
-                        Spacer(Modifier.width(8.dp))
+                        Spacer(Modifier.width(4.dp))
                         Text("Étape")
+                    }
+                    OutlinedButton(
+                        onClick = { update { p -> p.copy(steps = p.steps + newStep().copy(group = true)) } },
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Icon(Icons.Outlined.ViewAgenda, contentDescription = null)
+                        Spacer(Modifier.width(4.dp))
+                        Text("Groupe")
                     }
                     Button(onClick = { dictate(NEW_STEPS) }, modifier = Modifier.weight(1f)) {
                         Icon(Icons.Default.Mic, contentDescription = null)
-                        Spacer(Modifier.width(8.dp))
+                        Spacer(Modifier.width(4.dp))
                         Text("Dicter")
                     }
                 }
@@ -431,6 +462,50 @@ fun ProjectEditorScreen(
 
     if (managingPrimers) PrimerManagerSheet(data, repo, onDismiss = { managingPrimers = false })
 
+    mixPick?.let { state ->
+        val (stepId, idxText, slot, pendingA) = state.split("|").let { it + List(4 - it.size) { "" } }
+        val mixIndex = idxText.toIntOrNull() ?: -1
+        ModalBottomSheet(
+            onDismissRequest = { mixPick = null },
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        ) {
+            Text(
+                if (slot == "A") "Premier pot du mélange" else "Second pot du mélange",
+                style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.padding(horizontal = 16.dp),
+            )
+            PaintBrowser(
+                paints = repo.allPaints(data),
+                ownedIds = data.ownedPaintIds,
+                isChecked = { false },
+                onToggle = { _, _ -> },
+                onRowClick = { paint ->
+                    when {
+                        // Nouveau mélange : on enchaîne sur le second pot.
+                        mixIndex < 0 && slot == "A" -> mixPick = "$stepId|-1|B|${paint.id}"
+                        mixIndex < 0 -> {
+                            updateStep(stepId) { st -> st.copy(mixes = st.mixes + Mix(pendingA, paint.id)) }
+                            mixPick = null
+                        }
+                        else -> {
+                            updateStep(stepId) { st ->
+                                st.copy(mixes = st.mixes.mapIndexed { i, m ->
+                                    if (i != mixIndex) m else if (slot == "A") m.copy(paintA = paint.id) else m.copy(paintB = paint.id)
+                                })
+                            }
+                            mixPick = null
+                        }
+                    }
+                },
+                rowTrailing = { p -> if (p.id in data.ownedPaintIds) Text("✓", color = MaterialTheme.colorScheme.tertiary) },
+                showOwnedFilter = true,
+                initialOnlyOwned = data.ownedPaintIds.isNotEmpty(),
+                contentPadding = PaddingValues(bottom = 32.dp),
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
+    }
+
     voiceTarget?.let { target ->
         DictationDialog(
             hint = if (target == NEW_STEPS) "Ex. : aplats au pinceau avec Macragge Blue, dilué 1 pour 1, ensuite lavis avec Nuln Oil"
@@ -461,6 +536,7 @@ fun ProjectEditorScreen(
 @Composable
 private fun StepEditorCard(
     index: Int,
+    position: Int,
     count: Int,
     step: Step,
     data: AppData,
@@ -470,6 +546,7 @@ private fun StepEditorCard(
     onDelete: () -> Unit,
     onPickPaints: () -> Unit,
     onDictate: () -> Unit,
+    onPickMix: (Int, String) -> Unit,
 ) {
     val paintsById = remember(data) { repo.allPaints(data).associateBy { it.id } }
     Card(
@@ -485,10 +562,10 @@ private fun StepEditorCard(
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.weight(1f),
                 )
-                IconButton(onClick = { onMove(-1) }, enabled = index > 0) {
+                IconButton(onClick = { onMove(-1) }, enabled = position > 0) {
                     Icon(Icons.Outlined.KeyboardArrowUp, contentDescription = "Monter")
                 }
-                IconButton(onClick = { onMove(1) }, enabled = index < count - 1) {
+                IconButton(onClick = { onMove(1) }, enabled = position < count - 1) {
                     Icon(Icons.Outlined.KeyboardArrowDown, contentDescription = "Descendre")
                 }
                 IconButton(onClick = onDictate) {
@@ -582,6 +659,21 @@ private fun StepEditorCard(
                         }
                     )
                 }
+                step.mixes.forEachIndexed { i, mix ->
+                    MixEditor(
+                        mix = mix,
+                        paintsById = paintsById,
+                        onRatio = { r -> onChange { st -> st.copy(mixes = st.mixes.mapIndexed { j, m -> if (j == i) m.copy(ratioA = r) else m }) } },
+                        onPickA = { onPickMix(i, "A") },
+                        onPickB = { onPickMix(i, "B") },
+                        onRemove = { onChange { st -> st.copy(mixes = st.mixes.filterIndexed { j, _ -> j != i }) } },
+                    )
+                }
+                TextButton(onClick = { onPickMix(-1, "A") }) {
+                    Icon(Icons.Outlined.Blender, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("Ajouter un mélange de deux pots")
+                }
                 OutlinedTextField(
                     value = step.notes,
                     onValueChange = { v -> onChange { it.copy(notes = v) } },
@@ -603,4 +695,112 @@ private fun StepEditorCard(
             }
         }
     }
+}
+
+/** En-tête de groupe d'étapes : un simple titre. */
+@Composable
+private fun GroupHeaderCard(
+    step: Step,
+    canUp: Boolean,
+    canDown: Boolean,
+    onTitle: (String) -> Unit,
+    onMove: (Int) -> Unit,
+    onDelete: () -> Unit,
+) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .padding(top = 8.dp)
+            .clip(RoundedCornerShape(14.dp))
+            .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f))
+            .padding(start = 12.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(Icons.Outlined.ViewAgenda, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+        Spacer(Modifier.width(8.dp))
+        OutlinedTextField(
+            value = step.title,
+            onValueChange = onTitle,
+            label = { Text("Groupe") },
+            placeholder = { Text("ex. Armure, Peau, Cape, Socle…") },
+            singleLine = true,
+            modifier = Modifier.weight(1f),
+        )
+        IconButton(onClick = { onMove(-1) }, enabled = canUp) { Icon(Icons.Outlined.KeyboardArrowUp, contentDescription = "Monter") }
+        IconButton(onClick = { onMove(1) }, enabled = canDown) { Icon(Icons.Outlined.KeyboardArrowDown, contentDescription = "Descendre") }
+        IconButton(onClick = onDelete) { Icon(Icons.Outlined.Delete, contentDescription = "Supprimer le groupe") }
+    }
+}
+
+/** Mélange de deux pots avec son ratio réglable et la teinte obtenue. */
+@Composable
+private fun MixEditor(
+    mix: Mix,
+    paintsById: Map<String, Paint>,
+    onRatio: (Int) -> Unit,
+    onPickA: () -> Unit,
+    onPickB: () -> Unit,
+    onRemove: () -> Unit,
+) {
+    val a = paintsById[mix.paintA]
+    val b = paintsById[mix.paintB]
+    val result = if (a != null && b != null) ColorTheory.mixHex(a.hex, b.hex, mix.ratioA) else null
+    Column(
+        Modifier
+            .padding(vertical = 4.dp)
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+            .padding(start = 10.dp, end = 2.dp, top = 6.dp, bottom = 4.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("MÉLANGE", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary, modifier = Modifier.weight(1f))
+            result?.let {
+                Text("Résultat", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(Modifier.width(6.dp))
+                PaintSwatch(it, 22.dp)
+            }
+            IconButton(onClick = onRemove) { Icon(Icons.Default.Close, contentDescription = "Retirer le mélange", modifier = Modifier.size(18.dp)) }
+        }
+        @Composable
+        fun Side(p: Paint?, pct: Int, onPick: () -> Unit) {
+            Row(
+                Modifier.fillMaxWidth().clickable(onClick = onPick).padding(vertical = 2.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text("$pct %", style = MaterialTheme.typography.titleSmall, modifier = Modifier.width(52.dp))
+                if (p != null) {
+                    PaintSwatch(p.hex, 22.dp)
+                    Spacer(Modifier.width(8.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(p.displayName, style = MaterialTheme.typography.bodyMedium, maxLines = 1)
+                        Text("${p.brand.shortLabel()} · ${p.range}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                } else {
+                    Text("Choisir un pot", color = MaterialTheme.colorScheme.primary, modifier = Modifier.weight(1f))
+                }
+            }
+        }
+        Side(a, mix.ratioA, onPickA)
+        Side(b, mix.ratioB, onPickB)
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(end = 8.dp)) {
+            Text(ratioLabel(mix.ratioA), style = MaterialTheme.typography.labelMedium, modifier = Modifier.width(52.dp))
+            Slider(
+                value = mix.ratioA.toFloat(),
+                onValueChange = { onRatio(((it / 5).roundToInt() * 5).coerceIn(5, 95)) },
+                valueRange = 5f..95f,
+                steps = 17,
+                modifier = Modifier.weight(1f),
+            )
+        }
+    }
+}
+
+/** Ratio lisible : 50 % -> « 1:1 », 67 % -> « 2:1 »… sinon les pourcentages. */
+fun ratioLabel(ratioA: Int): String {
+    val b = 100 - ratioA
+    for (x in 1..4) for (y in 1..4) {
+        if (kotlin.math.abs(ratioA * y - b * x) <= 2 * (x + y)) return "$x:$y"
+    }
+    return "$ratioA/$b"
 }
