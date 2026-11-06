@@ -119,7 +119,12 @@ fun List<Step>.moveGroup(groupId: String, delta: Int): List<Step> {
         if (start == 0) return this
         val prev = start - 1
         val prevOwner = restOwners[prev]
-        if (prevOwner != null) rest.indexOfFirst { it.id == prevOwner } else prev
+        when {
+            prevOwner != null -> rest.indexOfFirst { it.id == prevOwner }
+            rest[prev].group -> prev
+            // Une étape hors groupe reste au-dessus des groupes (sinon elle serait absorbée).
+            else -> return this
+        }
     } else {
         if (start >= rest.size) return this
         val next = start

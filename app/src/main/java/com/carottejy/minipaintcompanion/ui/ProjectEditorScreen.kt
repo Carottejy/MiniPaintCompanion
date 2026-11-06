@@ -351,7 +351,7 @@ fun ProjectEditorScreen(
                         stepCount = sizes[step.id] ?: 0,
                         expanded = open,
                         onToggle = { setCollapsed(if (open) collapsed + step.id else collapsed - step.id) },
-                        canUp = index > 0,
+                        canUp = index > 0 && (draft.steps[index - 1].group || owners[index - 1] != null),
                         canDown = index + 1 + (sizes[step.id] ?: 0) <= draft.steps.lastIndex,
                         onTitle = { v -> updateStep(step.id) { it.copy(title = v) } },
                         onMove = { delta -> update { p -> p.copy(steps = p.steps.moveGroup(step.id, delta)) } },
