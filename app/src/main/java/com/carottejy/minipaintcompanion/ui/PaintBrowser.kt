@@ -59,8 +59,9 @@ fun PaintBrowser(
     onRowClick: ((Paint) -> Unit)? = null,
     rowTrailing: (@Composable (Paint) -> Unit)? = null,
     emptyText: String? = null,
+    initialQuery: String = "",
 ) {
-    var query by rememberSaveable { mutableStateOf("") }
+    var query by rememberSaveable { mutableStateOf(initialQuery) }
     var brandName by rememberSaveable { mutableStateOf<String?>(null) }
     var range by rememberSaveable { mutableStateOf<String?>(null) }
     var onlyOwned by rememberSaveable { mutableStateOf(initialOnlyOwned) }

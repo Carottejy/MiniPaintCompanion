@@ -1,4 +1,9 @@
 ## @VERSION@ — @DATE@
+- Le lecteur de codes-barres est remplacé par « Identifier un pot », avec deux options :
+- Étiquette : la caméra lit le nom ou la référence imprimés sur le pot et propose les pots correspondants (fonctionne hors ligne, marche aussi avec une photo existante) ;
+- QR code : lit un QR code (fiche produit, étiquette perso) ; le pot choisi est mémorisé pour les fois suivantes.
+
+## 1.0.16 — 04/11/2026
 - Correction : prendre une photo (pipette ou projet) faisait planter l'appli quand l'autorisation de l'appareil photo n'avait pas encore été donnée. Elle est maintenant demandée au besoin.
 - Pipette : annuler une photo ne fait plus perdre l'image en cours.
 

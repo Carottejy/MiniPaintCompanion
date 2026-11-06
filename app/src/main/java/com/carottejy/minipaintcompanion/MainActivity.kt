@@ -73,8 +73,11 @@ import com.carottejy.minipaintcompanion.ui.PipetteScreen
 import androidx.compose.material.icons.outlined.Colorize
 import androidx.compose.material.icons.outlined.Info
 import com.carottejy.minipaintcompanion.ui.ShoppingScreen
-import com.carottejy.minipaintcompanion.ui.UnknownBarcodeSheet
-import com.carottejy.minipaintcompanion.ui.BarcodeScannerOverlay
+import com.carottejy.minipaintcompanion.ui.PaintChoiceSheet
+import com.carottejy.minipaintcompanion.ui.qrToText
+import com.carottejy.minipaintcompanion.data.VoiceParser
+import androidx.compose.material.icons.outlined.DocumentScanner
+import com.carottejy.minipaintcompanion.ui.PaintScannerOverlay
 import com.carottejy.minipaintcompanion.ui.shortLabel
 import com.carottejy.minipaintcompanion.update.UpdateDialog
 import com.carottejy.minipaintcompanion.update.UpdateInfo
@@ -208,6 +211,14 @@ fun App(repo: Repository) {
 
 private data class Tab(val title: String, val label: String)
 
+private data class PaintChoice(
+    val title: String,
+    val message: String,
+    val candidates: List<Paint>,
+    val query: String,
+    val code: String?,
+)
+
 private val TABS = listOf(
     Tab("Mes projets", "Mes projets"),
     Tab("Mes peintures", "Mes peintures"),
@@ -239,7 +250,8 @@ private fun HomeScreen(
     var showCustom by remember { mutableStateOf(false) }
     var menuOpen by remember { mutableStateOf(false) }
     var confirmRestore by remember { mutableStateOf(false) }
-    var unknownCode by rememberSaveable { mutableStateOf<String?>(null) }
+    // Identification incertaine : choix du pot (QR inconnu, étiquette non reconnue).
+    var choice by remember { mutableStateOf<PaintChoice?>(null) }
     var colorBasePaintId by rememberSaveable { mutableStateOf<String?>(null) }
     var colorFreeHex by rememberSaveable { mutableStateOf("#C8553D") }
     val context = LocalContext.current
@@ -262,10 +274,10 @@ private fun HomeScreen(
 
     var rescanRequests by remember { mutableIntStateOf(0) }
 
-    fun added(p: Paint, code: String) {
+    fun added(p: Paint, code: String?) {
         val wasToBuy = p.id in data.toBuyIds
         val wasOwned = p.id in data.ownedPaintIds
-        repo.linkBarcode(code, p.id)
+        if (code != null) repo.linkBarcode(code, p.id)
         repo.markBought(p.id)
         val msg = when {
             wasToBuy -> "${p.name} acheté : retiré de la liste, ajouté à ta collection"
@@ -274,7 +286,7 @@ private fun HomeScreen(
         }
         scope.launch {
             snackbar.currentSnackbarData?.dismiss()
-            val r = snackbar.showSnackbar(msg, actionLabel = "Scanner un autre", duration = SnackbarDuration.Long)
+            val r = snackbar.showSnackbar(msg, actionLabel = "Identifier un autre", duration = SnackbarDuration.Long)
             if (r == SnackbarResult.ActionPerformed) rescanRequests++
         }
     }
@@ -323,7 +335,7 @@ private fun HomeScreen(
                 actions = {
                     if (tab == T_PAINTS || tab == T_CATALOG || tab == T_SHOPPING) {
                         IconButton(onClick = { startScan() }) {
-                            Icon(Icons.Outlined.QrCodeScanner, contentDescription = "Scanner le code-barres d'un pot")
+                            Icon(Icons.Outlined.DocumentScanner, contentDescription = "Identifier un pot (étiquette ou QR code)")
                         }
                     }
                     if (tab == T_PAINTS || tab == T_CATALOG) {
@@ -450,24 +462,53 @@ private fun HomeScreen(
     }
 
     if (scanning) {
-        BarcodeScannerOverlay(
-            onCode = { code ->
+        val allPaints = repo.allPaints(data)
+        PaintScannerOverlay(
+            paints = allPaints,
+            ownedIds = data.ownedPaintIds,
+            onPaint = { p -> scanning = false; added(p, null) },
+            onQr = { content ->
                 scanning = false
-                val p = repo.paintForBarcode(code)
-                if (p != null) added(p, code) else unknownCode = code
+                val key = "qr:$content"
+                val learned = data.barcodes[key]?.let { id -> allPaints.firstOrNull { it.id == id } }
+                if (learned != null) {
+                    added(learned, key)
+                } else {
+                    val cands = VoiceParser.candidates(qrToText(content), allPaints, data.ownedPaintIds, 3).map { it.first }
+                    choice = PaintChoice(
+                        title = "QR code lu",
+                        message = "Choisis le pot correspondant : je retiendrai ce QR code pour les prochaines fois.",
+                        candidates = cands,
+                        query = "",
+                        code = key,
+                    )
+                }
+            },
+            onSearch = { text ->
+                scanning = false
+                choice = PaintChoice(
+                    title = "Choisir le pot",
+                    message = "Je n'ai pas réussi à lire le nom avec certitude. Cherche le pot par son nom ou sa référence.",
+                    candidates = emptyList(),
+                    query = "",
+                    code = null,
+                )
             },
             onClose = { scanning = false },
         )
     }
     }
 
-    unknownCode?.let { code ->
-        UnknownBarcodeSheet(
-            code = code,
+    choice?.let { c ->
+        PaintChoiceSheet(
+            title = c.title,
+            message = c.message,
+            candidates = c.candidates,
+            initialQuery = c.query,
             data = data,
             repo = repo,
-            onPicked = { p -> unknownCode = null; added(p, code) },
-            onDismiss = { unknownCode = null },
+            onPicked = { p -> choice = null; added(p, c.code) },
+            onDismiss = { choice = null },
         )
     }
 

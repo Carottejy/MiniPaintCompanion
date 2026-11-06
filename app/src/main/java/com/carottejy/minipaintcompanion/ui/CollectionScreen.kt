@@ -31,7 +31,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.outlined.AddShoppingCart
 import androidx.compose.material.icons.outlined.Palette
-import androidx.compose.material.icons.outlined.QrCodeScanner
+import androidx.compose.material.icons.outlined.DocumentScanner
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -86,9 +86,9 @@ fun CollectionScreen(
             Row(Modifier.padding(bottom = 120.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(onClick = onOpenCatalog) { Text("Ouvrir le catalogue") }
                 OutlinedButton(onClick = onScan) {
-                    Icon(Icons.Outlined.QrCodeScanner, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Icon(Icons.Outlined.DocumentScanner, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text("Scanner")
+                    Text("Identifier un pot")
                 }
             }
         }

@@ -66,7 +66,7 @@ fun ShoppingScreen(
         item {
             Text(
                 "${list.size} pot${if (list.size > 1) "s" else ""} à acheter. Coche un pot acheté : il rejoint ta collection. " +
-                    "En boutique, tu peux aussi scanner les pots achetés.",
+                    "Tu peux aussi identifier un pot acheté avec la caméra.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
@@ -92,7 +92,7 @@ fun ShoppingScreen(
                     Text("Partager")
                 }
                 Spacer(Modifier.width(8.dp))
-                OutlinedButton(onClick = onScan) { Text("Scanner un achat") }
+                OutlinedButton(onClick = onScan) { Text("Identifier un achat") }
             }
         }
         list.groupBy { "${it.brand.shortLabel()} · ${it.range}" }.forEach { (title, paints) ->

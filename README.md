@@ -5,7 +5,7 @@ Carnet de peinture de figurines pour Android.
 - **Mes projets** : photo de la figurine terminée (appareil photo ou galerie), nom, notes, et toutes les étapes de peinture.
 - **Étapes** : titre (sous-couche, aplats, lavis…), technique **pinceau** ou **aérographe**, pots utilisés, notes (dilution, pression…). Réordonnables.
 - **Dictée vocale** : dans un projet, le bouton « Dicter » crée une ou plusieurs étapes à partir d'une phrase (« Aplats au pinceau avec Macragge Blue, dilué 1 pour 1, ensuite lavis avec Nuln Oil ») ; le micro d'une étape la complète. Titre, technique, pots (reconnaissance tolérante aux fautes de transcription, références Vallejo comprises) et notes (dilution, pression…) sont remplis automatiquement.
-- **Mes peintures** : les pots que tu possèdes, cochés depuis le catalogue ou **scannés au code-barres** ; pots perso pour les autres marques. Un pot presque vide se marque « à racheter ».
+- **Mes peintures** : les pots que tu possèdes, cochés depuis le catalogue ou **identifiés à la caméra** (étiquette ou QR code) ; pots perso pour les autres marques. Un pot presque vide se marque « à racheter ».
 - **Achat** : la liste des pots à acheter/racheter (depuis la collection, le catalogue, une réalisation ou l'onglet Couleurs). Cocher un pot acheté — ou le scanner — le fait passer dans la collection. Liste partageable.
 - **Théorie** : roue chromatique du peintre (RJB) ou de la lumière (RVB), harmonies (complémentaire, adjacentes, analogue, triade, rectangle, carré, camaïeu) et ombre/lumière ; pour chaque couleur, les pots du catalogue ou de ta collection les plus proches (écart ΔE en L*a*b*).
 - **Catalogue** (onglet) : Citadel, Vallejo (Model Color, Game Color, Model Air, Xpress, lavis), The Army Painter (Warpaints, Quickshade, Speedpaint, bombes), Prince August — recherche par nom ou référence, filtres marque/gamme.
@@ -16,9 +16,11 @@ Les données restent sur le téléphone (fichier JSON + photos dans l'espace pri
 
 - **Pipette** : sur une photo, un curseur relève une couleur (moyenne de quelques pixels) ; l'appli propose les pots les plus proches (ΔE L*a*b*), à ajouter à la liste d'achat. Jusqu'à 8 couleurs épinglées pour composer une palette.
 
-## Scan des codes-barres
+## Identifier un pot
 
-Le scanner de Google Play services lit les EAN/UPC. Les pots Vallejo sont reconnus automatiquement (EAN `8429551` + référence). Pour les autres marques, le premier scan d'un code inconnu demande de choisir le pot ; le code est ensuite mémorisé (et inclus dans la sauvegarde).
+Caméra intégrée (CameraX), deux modes :
+- **Étiquette** : reconnaissance de texte ML Kit embarquée (hors ligne), une image toutes les 0,7 s ; le texte est rapproché du catalogue (`VoiceParser.candidates` : noms tolérants aux erreurs de lecture, marque et gamme lues sur l'étiquette, références Vallejo). Fonctionne aussi sur une photo de la galerie.
+- **QR code** : le contenu (souvent une URL produit) est analysé de la même façon ; le pot choisi est mémorisé (`qr:<contenu>`) et inclus dans la sauvegarde.
 
 ## Mise à jour automatique
 

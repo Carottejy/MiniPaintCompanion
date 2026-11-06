@@ -152,6 +152,60 @@ object VoiceParser {
         return result.sortedBy { it.first }.map { it.second }.distinct()
     }
 
+    /** Gammes repérables sur une étiquette : elles départagent les pots de même nom. */
+    private val RANGE_WORDS = mapOf(
+        "base" to "Base", "layer" to "Layer", "shade" to "Shade", "contrast" to "Contrast",
+        "dry" to "Dry", "technical" to "Technical", "model color" to "Model Color", "game color" to "Game Color",
+        "model air" to "Model Air", "xpress" to "Xpress Color", "speedpaint" to "Speedpaint",
+        "warpaints" to "Warpaints", "fanatic" to "Warpaints", "quickshade" to "Quickshade Wash", "wash" to "Wash",
+    )
+
+    /**
+     * Pots candidats pour un texte libre (étiquette lue par la caméra, contenu d'un QR code),
+     * du plus probable au moins probable, avec un score.
+     */
+    fun candidates(text: String, paints: List<Paint>, ownedIds: Set<String>, max: Int = 5): List<Pair<Paint, Double>> {
+        val norm = normalize(text)
+        val tokens = norm.split(" ").filter { it.isNotEmpty() }
+        if (tokens.isEmpty()) return emptyList()
+        val brandsSaid = BRAND_WORDS.filter { (_, words) -> words.any { norm.contains(it) } }.keys
+        val rangesSaid = RANGE_WORDS.filter { (w, _) -> Regex("""\b$w\b""").containsMatchIn(norm) }.values.toSet()
+
+        val best = HashMap<String, Pair<Paint, Double>>()
+        fun offer(p: Paint, base: Double) {
+            var score = base + kotlin.math.min(normalize(p.name).replace(" ", "").length, 20) / 100.0
+            if (p.brand in brandsSaid) score += 0.3
+            if (p.range in rangesSaid) score += 0.3
+            if (p.id in ownedIds) score += 0.05
+            val prev = best[p.id]
+            if (prev == null || prev.second < score) best[p.id] = p to score
+        }
+        for (p in paints) {
+            val nameTokens = normalize(p.name).split(" ").filter { it.isNotEmpty() }
+            if (nameTokens.isEmpty()) continue
+            val compactName = nameTokens.joinToString("")
+            val n = nameTokens.size
+            val threshold = when {
+                compactName.length <= 6 -> 1.0
+                compactName.length >= 7 -> 0.75
+                else -> 0.8
+            }
+            for (size in max(1, n - 1)..n + 1) {
+                for (start in 0..tokens.size - size) {
+                    val window = tokens.subList(start, start + size).joinToString("")
+                    val score = if (window == compactName) 1.0 else similarity(window, compactName)
+                    if (score >= threshold) offer(p, score)
+                }
+            }
+        }
+        // Référence Vallejo imprimée (« 70.951 ») : quasi certaine.
+        VALLEJO_CODE.findAll(norm).forEach { m ->
+            val code = "${m.groupValues[1]}.${m.groupValues[2]}"
+            paints.filter { it.brand == Brand.VALLEJO && it.code == code }.forEach { offer(it, 2.0) }
+        }
+        return best.values.sortedByDescending { it.second }.take(max)
+    }
+
     /** Similarité 0–1 basée sur la distance de Levenshtein. */
     private fun similarity(a: String, b: String): Double {
         if (a.isEmpty() || b.isEmpty()) return 0.0
