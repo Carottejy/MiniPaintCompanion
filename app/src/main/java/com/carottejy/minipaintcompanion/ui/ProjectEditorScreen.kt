@@ -29,7 +29,15 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material.icons.filled.DragIndicator
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.draw.shadow
+import com.carottejy.minipaintcompanion.data.reorderBlocks
+import sh.calvin.reorderable.ReorderableItem
+import sh.calvin.reorderable.rememberReorderableLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -141,6 +149,8 @@ fun ProjectEditorScreen(
     var collapsedText by rememberSaveable { mutableStateOf("") }
     val collapsed = collapsedText.split(",").filter { it.isNotBlank() }.toSet()
     fun setCollapsed(v: Set<String>) { collapsedText = v.joinToString(",") }
+    // Groupe en cours de glisser-déposer : replié le temps du déplacement.
+    var draggingGroup by remember { mutableStateOf<String?>(null) }
     var confirmDiscard by remember { mutableStateOf(false) }
 
     // ---------------------------------------------------------------- dictée vocale
@@ -273,8 +283,19 @@ fun ProjectEditorScreen(
             )
         },
     ) { padding ->
+        val haptic = LocalHapticFeedback.current
+        val listState = rememberLazyListState()
+        val reorderState = rememberReorderableLazyListState(listState) { from, to ->
+            val fromId = from.key as? String ?: return@rememberReorderableLazyListState
+            val toId = to.key as? String ?: return@rememberReorderableLazyListState
+            val folded = collapsed + listOfNotNull(draggingGroup)
+            var moved = false
+            update { p -> p.steps.reorderBlocks(folded, fromId, toId)?.let { moved = true; p.copy(steps = it) } ?: p }
+            if (moved) haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+        }
         LazyColumn(
             Modifier.fillMaxSize().padding(padding).imePadding(),
+            state = listState,
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 48.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
@@ -331,48 +352,65 @@ fun ProjectEditorScreen(
             }
             val owners = draft.steps.groupOwners()
             val sizes = draft.steps.groupSizes()
-            itemsIndexed(draft.steps, key = { _, s -> s.id }) { index, step ->
-                // Étape d'un groupe replié : masquée.
-                if (owners[index] != null && owners[index] in collapsed) return@itemsIndexed
-                val onMove: (Int) -> Unit = { delta ->
-                    update { p ->
-                        val list = p.steps.toMutableList()
-                        val target = index + delta
-                        if (target in list.indices) {
-                            val tmp = list[index]; list[index] = list[target]; list[target] = tmp
+            val folded = collapsed + listOfNotNull(draggingGroup)
+            // Étapes d'un groupe replié (ou en cours de déplacement) : masquées.
+            val visible = draft.steps.filterIndexed { i, _ -> owners[i] == null || owners[i] !in folded }
+            items(visible, key = { it.id }) { step ->
+                val index = draft.steps.indexOfFirst { it.id == step.id }
+                if (index < 0) return@items
+                ReorderableItem(reorderState, key = step.id) { isDragging ->
+                    val handle = Modifier.draggableHandle(
+                        onDragStarted = {
+                            if (step.group) draggingGroup = step.id
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        },
+                        onDragStopped = { draggingGroup = null },
+                    )
+                    val lifted = if (isDragging) Modifier.shadow(10.dp, RoundedCornerShape(20.dp)) else Modifier
+                    val onMove: (Int) -> Unit = { delta ->
+                        update { p ->
+                            val list = p.steps.toMutableList()
+                            val target = index + delta
+                            if (target in list.indices) {
+                                val tmp = list[index]; list[index] = list[target]; list[target] = tmp
+                            }
+                            p.copy(steps = list)
                         }
-                        p.copy(steps = list)
+                    }
+                    Box(lifted) {
+                        if (step.group) {
+                            val open = step.id !in folded
+                            GroupHeaderCard(
+                                step = step,
+                                stepCount = sizes[step.id] ?: 0,
+                                expanded = open,
+                                onToggle = { setCollapsed(if (step.id !in collapsed) collapsed + step.id else collapsed - step.id) },
+                                canUp = index > 0 && (draft.steps[index - 1].group || owners[index - 1] != null),
+                                canDown = index + 1 + (sizes[step.id] ?: 0) <= draft.steps.lastIndex,
+                                onTitle = { v -> updateStep(step.id) { it.copy(title = v) } },
+                                onMove = { delta -> update { p -> p.copy(steps = p.steps.moveGroup(step.id, delta)) } },
+                                onDelete = { update { p -> p.copy(steps = p.steps.filterNot { it.id == step.id }) } },
+                                handle = handle,
+                            )
+                        } else {
+                            StepEditorCard(
+                                index = draft.steps.take(index).count { !it.group },
+                                position = index,
+                                count = draft.steps.size,
+                                step = step,
+                                data = data,
+                                repo = repo,
+                                onChange = { f -> updateStep(step.id, f) },
+                                onMove = onMove,
+                                onDelete = { update { p -> p.copy(steps = p.steps.filterNot { it.id == step.id }) } },
+                                onPickPaints = { pickingStepId = step.id },
+                                onDictate = { dictate(step.id) },
+                                onPickMix = { mixIndex, slot -> mixPick = "${step.id}|$mixIndex|$slot|" },
+                                handle = handle,
+                            )
+                        }
                     }
                 }
-                if (step.group) {
-                    val open = step.id !in collapsed
-                    GroupHeaderCard(
-                        step = step,
-                        stepCount = sizes[step.id] ?: 0,
-                        expanded = open,
-                        onToggle = { setCollapsed(if (open) collapsed + step.id else collapsed - step.id) },
-                        canUp = index > 0 && (draft.steps[index - 1].group || owners[index - 1] != null),
-                        canDown = index + 1 + (sizes[step.id] ?: 0) <= draft.steps.lastIndex,
-                        onTitle = { v -> updateStep(step.id) { it.copy(title = v) } },
-                        onMove = { delta -> update { p -> p.copy(steps = p.steps.moveGroup(step.id, delta)) } },
-                        onDelete = { update { p -> p.copy(steps = p.steps.filterNot { it.id == step.id }) } },
-                    )
-                    return@itemsIndexed
-                }
-                StepEditorCard(
-                    index = draft.steps.take(index).count { !it.group },
-                    position = index,
-                    count = draft.steps.size,
-                    step = step,
-                    data = data,
-                    repo = repo,
-                    onChange = { f -> updateStep(step.id, f) },
-                    onMove = onMove,
-                    onDelete = { update { p -> p.copy(steps = p.steps.filterNot { it.id == step.id }) } },
-                    onPickPaints = { pickingStepId = step.id },
-                    onDictate = { dictate(step.id) },
-                    onPickMix = { mixIndex, slot -> mixPick = "${step.id}|$mixIndex|$slot|" },
-                )
             }
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -564,14 +602,16 @@ private fun StepEditorCard(
     onPickPaints: () -> Unit,
     onDictate: () -> Unit,
     onPickMix: (Int, String) -> Unit,
+    handle: Modifier = Modifier,
 ) {
     val paintsById = remember(data) { repo.allPaints(data).associateBy { it.id } }
     Card(
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
     ) {
-        Column(Modifier.padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 16.dp)) {
+        Column(Modifier.padding(start = 4.dp, end = 8.dp, top = 8.dp, bottom = 16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
+                DragHandle(handle, "Glisser pour déplacer l'étape")
                 Text(
                     "ÉTAPE ${index + 1}",
                     style = MaterialTheme.typography.labelSmall,
@@ -592,7 +632,7 @@ private fun StepEditorCard(
                     Icon(Icons.Outlined.Delete, contentDescription = "Supprimer l'étape")
                 }
             }
-            Column(Modifier.padding(end = 8.dp)) {
+            Column(Modifier.padding(start = 12.dp, end = 8.dp)) {
                 OutlinedTextField(
                     value = step.title,
                     onValueChange = { v -> onChange { it.copy(title = v) } },
@@ -726,6 +766,7 @@ private fun GroupHeaderCard(
     onTitle: (String) -> Unit,
     onMove: (Int) -> Unit,
     onDelete: () -> Unit,
+    handle: Modifier = Modifier,
 ) {
     Row(
         Modifier
@@ -736,6 +777,7 @@ private fun GroupHeaderCard(
             .padding(start = 0.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        DragHandle(handle, "Glisser pour déplacer le groupe et ses étapes")
         IconButton(onClick = onToggle) {
             Icon(
                 if (expanded) Icons.Outlined.KeyboardArrowDown else Icons.AutoMirrored.Outlined.KeyboardArrowRight,
@@ -754,6 +796,18 @@ private fun GroupHeaderCard(
         IconButton(onClick = { onMove(-1) }, enabled = canUp) { Icon(Icons.Outlined.KeyboardArrowUp, contentDescription = "Monter") }
         IconButton(onClick = { onMove(1) }, enabled = canDown) { Icon(Icons.Outlined.KeyboardArrowDown, contentDescription = "Descendre") }
         IconButton(onClick = onDelete) { Icon(Icons.Outlined.Delete, contentDescription = "Supprimer le groupe") }
+    }
+}
+
+/** Poignée ⋮⋮ à maintenir pour glisser-déposer. */
+@Composable
+private fun DragHandle(handle: Modifier, description: String) {
+    Box(handle.size(36.dp, 48.dp), contentAlignment = Alignment.Center) {
+        Icon(
+            Icons.Filled.DragIndicator,
+            contentDescription = description,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 

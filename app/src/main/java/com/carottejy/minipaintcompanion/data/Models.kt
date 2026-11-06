@@ -137,3 +137,30 @@ fun List<Step>.moveGroup(groupId: String, delta: Int): List<Step> {
     rest.addAll(insertAt, block)
     return rest
 }
+
+/**
+ * Glisser-déposer : déplace l'élément [fromId] à la place de [toId] dans la liste visible.
+ * Un groupe replié (dans [collapsed]) se déplace avec toutes ses étapes.
+ * Retourne null si le déplacement ferait entrer des étapes hors groupe dans un groupe.
+ */
+fun List<Step>.reorderBlocks(collapsed: Set<String>, fromId: String, toId: String): List<Step>? {
+    val owners = groupOwners()
+    val blocks = mutableListOf<MutableList<Step>>()
+    forEachIndexed { i, s ->
+        if (owners[i] != null && owners[i] in collapsed && blocks.isNotEmpty()) blocks.last().add(s)
+        else blocks.add(mutableListOf(s))
+    }
+    val from = blocks.indexOfFirst { it.first().id == fromId }
+    val to = blocks.indexOfFirst { it.first().id == toId }
+    if (from < 0 || to < 0 || from == to) return null
+    val moved = blocks.removeAt(from)
+    blocks.add(to, moved)
+    val result = blocks.flatten()
+    if (moved.first().group) {
+        // Les étapes qui n'étaient dans aucun groupe doivent le rester.
+        val before = owners.indices.filter { owners[it] == null && !this[it].group }.map { this[it].id }.toSet()
+        val newOwners = result.groupOwners()
+        if (result.indices.any { result[it].id in before && newOwners[it] != null }) return null
+    }
+    return result
+}

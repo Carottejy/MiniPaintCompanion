@@ -1,4 +1,7 @@
 ## @VERSION@ — @DATE@
+- Glisser-déposer dans l'éditeur de schéma : maintiens la poignée ⋮⋮ d'une étape ou d'un groupe et déplace-la. Un groupe se replie pendant le déplacement et emporte toutes ses étapes ; une étape lâchée dans un groupe en fait partie.
+
+## 1.0.24 — 06/11/2026
 - Les groupes contiennent leurs étapes : touche l'en-tête pour replier ou ouvrir le groupe (fiche et éditeur), avec le nombre d'étapes. Déplacer un groupe déplace toutes ses étapes.
 
 ## 1.0.22 — 06/11/2026
