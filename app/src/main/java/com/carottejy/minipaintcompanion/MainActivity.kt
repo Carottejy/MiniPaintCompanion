@@ -1,6 +1,11 @@
 package com.carottejy.minipaintcompanion
 
 import android.os.Bundle
+import android.os.Build
+import android.content.Intent
+import android.net.Uri
+import androidx.lifecycle.lifecycleScope
+import androidx.compose.material.icons.outlined.FileOpen
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -97,15 +102,33 @@ import androidx.compose.material.icons.outlined.ShoppingCart
 import androidx.compose.material.icons.outlined.SystemUpdate
 
 class MainActivity : ComponentActivity() {
+    /** Schéma reçu d'une autre appli (fichier .minipaint.zip). */
+    private val incoming = mutableStateOf<Uri?>(null)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         val repo = Repository.get(this)
+        if (savedInstanceState == null) incoming.value = sharedUri(intent)
         setContent {
             MiniPaintTheme {
-                App(repo)
+                App(repo, incoming = incoming.value, onIncomingHandled = { incoming.value = null })
             }
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        sharedUri(intent)?.let { incoming.value = it }
+    }
+
+    @Suppress("DEPRECATION")
+    private fun sharedUri(intent: Intent?): Uri? = when (intent?.action) {
+        Intent.ACTION_VIEW -> intent.data
+        Intent.ACTION_SEND ->
+            if (Build.VERSION.SDK_INT >= 33) intent.getParcelableExtra(Intent.EXTRA_STREAM, Uri::class.java)
+            else intent.getParcelableExtra(Intent.EXTRA_STREAM)
+        else -> null
     }
 }
 
@@ -114,10 +137,28 @@ private fun NavHostController.back() {
 }
 
 @Composable
-fun App(repo: Repository) {
+fun App(repo: Repository, incoming: Uri? = null, onIncomingHandled: () -> Unit = {}) {
     val data by repo.data.collectAsStateWithLifecycle()
     val nav = rememberNavController()
     val context = LocalContext.current
+
+    // Import d'un schéma partagé, puis ouverture de sa fiche.
+    fun importSchema(uri: Uri) {
+        (context as? ComponentActivity)?.lifecycleScope?.launch {
+            runCatching { repo.importSchema(uri) }
+                .onSuccess { p ->
+                    Toast.makeText(context, "Schéma « ${p.name.ifBlank { "Sans titre" }} » importé", Toast.LENGTH_LONG).show()
+                    nav.navigate("project/${p.id}")
+                }
+                .onFailure { Toast.makeText(context, it.message ?: "Import impossible", Toast.LENGTH_LONG).show() }
+        }
+    }
+    LaunchedEffect(incoming) {
+        if (incoming != null) {
+            importSchema(incoming)
+            onIncomingHandled()
+        }
+    }
     var update by remember { mutableStateOf<UpdateInfo?>(null) }
 
     var installing by remember { mutableStateOf<String?>(null) }
@@ -178,6 +219,7 @@ fun App(repo: Repository) {
                 onOpenProject = { nav.navigate("project/$it") },
                 onNewProject = { nav.navigate("edit/new") },
                 onUpdateFound = { update = it },
+                onImportSchema = { importSchema(it) },
             )
         }
         composable("project/{id}") { entry ->
@@ -220,7 +262,7 @@ private data class PaintChoice(
 )
 
 private val TABS = listOf(
-    Tab("Mes projets", "Mes projets"),
+    Tab("Mes schémas", "Mes schémas"),
     Tab("Mes peintures", "Mes peintures"),
     Tab("Catalogue", "Catalogue"),
     Tab("Liste d'achat", "Achat"),
@@ -245,6 +287,7 @@ private fun HomeScreen(
     onOpenProject: (String) -> Unit,
     onNewProject: () -> Unit,
     onUpdateFound: (UpdateInfo) -> Unit,
+    onImportSchema: (Uri) -> Unit,
 ) {
     var tab by rememberSaveable { mutableIntStateOf(0) }
     var showCustom by remember { mutableStateOf(false) }
@@ -301,16 +344,19 @@ private fun HomeScreen(
     val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
         if (uri != null) scope.launch {
             val msg = runCatching { repo.exportBackup(uri) }.fold(
-                { n -> "Sauvegarde créée ($n projet${if (n > 1) "s" else ""})" },
+                { n -> "Sauvegarde créée ($n schéma${if (n > 1) "s" else ""})" },
                 { e -> "Échec de la sauvegarde : ${e.message}" },
             )
             toast(msg)
         }
     }
+    val schemaPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) onImportSchema(uri)
+    }
     val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) scope.launch {
             val msg = runCatching { repo.importBackup(uri) }.fold(
-                { n -> "Sauvegarde restaurée ($n projet${if (n > 1) "s" else ""})" },
+                { n -> "Sauvegarde restaurée ($n schéma${if (n > 1) "s" else ""})" },
                 { e -> "Échec de la restauration : ${e.message}" },
             )
             toast(msg)
@@ -355,6 +401,14 @@ private fun HomeScreen(
                                     menuOpen = false
                                     val day = SimpleDateFormat("yyyy-MM-dd", Locale.FRANCE).format(Date())
                                     exportLauncher.launch("MiniPaintCompanion-sauvegarde-$day.zip")
+                                },
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Importer un schéma") },
+                                leadingIcon = { Icon(Icons.Outlined.FileOpen, contentDescription = null) },
+                                onClick = {
+                                    menuOpen = false
+                                    schemaPicker.launch(arrayOf("application/zip", "application/x-zip-compressed", "application/octet-stream"))
                                 },
                             )
                             DropdownMenuItem(
@@ -427,7 +481,7 @@ private fun HomeScreen(
                 ExtendedFloatingActionButton(
                     onClick = onNewProject,
                     icon = { Icon(Icons.Default.Add, contentDescription = null) },
-                    text = { Text("Nouveau projet") },
+                    text = { Text("Nouveau schéma") },
                 )
             }
         },
@@ -538,7 +592,7 @@ private fun HomeScreen(
             title = { Text("Restaurer une sauvegarde ?") },
             text = {
                 Text(
-                    "Tes projets, tes peintures, ta liste d'achat et tes pots perso actuels seront remplacés " +
+                    "Tes schémas, tes peintures, ta liste d'achat et tes pots perso actuels seront remplacés " +
                         "par le contenu du fichier .zip choisi."
                 )
             },

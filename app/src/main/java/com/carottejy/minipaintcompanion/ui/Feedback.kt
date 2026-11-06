@@ -160,7 +160,7 @@ fun FeedbackDialog(type: FeedbackType, onDismiss: () -> Unit) {
                     modifier = Modifier.fillMaxWidth(),
                 )
                 Text(
-                    "Pas besoin de compte : ton message devient un ticket public sur la page GitHub du projet. " +
+                    "Pas besoin de compte : ton message devient un ticket public sur la page GitHub de l'application. " +
                         "La version de l'appli" + (if (type == FeedbackType.BUG) " et le modèle du téléphone sont ajoutés" else " est ajoutée") +
                         ". N'y mets pas d'informations personnelles.",
                     style = MaterialTheme.typography.bodySmall,

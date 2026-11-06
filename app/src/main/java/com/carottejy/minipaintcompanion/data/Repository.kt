@@ -85,6 +85,26 @@ class Repository private constructor(context: Context) {
         it.copy(toBuyIds = it.toBuyIds - paintId, ownedPaintIds = it.ownedPaintIds + paintId)
     }
 
+    // ------------------------------------------------------------ sous-couches
+
+    /** Ma liste de sous-couches (par défaut : les plus courantes). */
+    fun primerIds(d: AppData = _data.value): Set<String> = d.primerIds ?: Catalog.defaultPrimerIds
+
+    fun setInPrimerList(paintId: String, inList: Boolean) = mutate { d ->
+        val current = d.primerIds ?: Catalog.defaultPrimerIds
+        d.copy(primerIds = if (inList) current + paintId else current - paintId)
+    }
+
+    /** Toutes les sous-couches connues : catalogue + pots perso classés « Sous-couche ». */
+    fun allPrimers(d: AppData = _data.value): List<Paint> = allPaints(d).filter { Catalog.isPrimer(it) }
+
+    /** Sous-couche perso (autre marque, teinte maison) : ajoutée à la liste et à la collection. */
+    fun addCustomPrimer(name: String, brandLabel: String, hex: String): Paint {
+        val paint = addCustomPaint(name, "Sous-couche" + if (brandLabel.isBlank()) "" else " · ${brandLabel.trim()}", hex)
+        setInPrimerList(paint.id, true)
+        return paint
+    }
+
     // ------------------------------------------------------------ codes-barres
 
     /**
@@ -228,6 +248,83 @@ class Repository private constructor(context: Context) {
         }
     }
 
+    // ------------------------------------------------------------ partage de schéma
+
+    /**
+     * Fichier de partage d'un schéma : schema.json (schéma + pots perso utilisés) et sa photo.
+     * Les pots du catalogue sont désignés par leur identifiant, identique d'un téléphone à l'autre.
+     */
+    suspend fun exportSchema(projectId: String): File = withContext(Dispatchers.IO) {
+        val d = _data.value
+        val project = d.projects.first { it.id == projectId }
+        val used = project.steps.flatMap { it.paintIds }.toSet()
+        val payload = SharedSchema(
+            project = project.copy(photo = project.photo?.let { "photo.jpg" }),
+            customPaints = d.customPaints.filter { it.id in used },
+        )
+        val dir = File(appContext.cacheDir, "share").apply { deleteRecursively(); mkdirs() }
+        val safeName = Catalog.slug(project.name).ifBlank { "schema" }
+        val out = File(dir, "$safeName.minipaint.zip")
+        ZipOutputStream(out.outputStream()).use { zip ->
+            zip.putNextEntry(ZipEntry(SCHEMA_JSON))
+            zip.write(json.encodeToString(SharedSchema.serializer(), payload).toByteArray())
+            zip.closeEntry()
+            photoFile(project.photo)?.let { f ->
+                zip.putNextEntry(ZipEntry("photo.jpg"))
+                f.inputStream().use { it.copyTo(zip) }
+                zip.closeEntry()
+            }
+        }
+        out
+    }
+
+    /** Importe un schéma partagé ; retourne son identifiant (nouveau, pour ne rien écraser). */
+    suspend fun importSchema(uri: Uri): Project = withContext(Dispatchers.IO) {
+        var shared: SharedSchema? = null
+        var photoName: String? = null
+        var isBackup = false
+        val input = appContext.contentResolver.openInputStream(uri) ?: error("Impossible de lire le fichier")
+        ZipInputStream(input).use { zip ->
+            var entry = zip.nextEntry
+            while (entry != null) {
+                when (entry.name) {
+                    SCHEMA_JSON -> shared = json.decodeFromString(SharedSchema.serializer(), zip.readBytes().decodeToString())
+                    "photo.jpg" -> {
+                        val f = newPhotoFile()
+                        f.outputStream().use { zip.copyTo(it) }
+                        photoName = f.name
+                    }
+                    BACKUP_JSON -> isBackup = true
+                }
+                zip.closeEntry()
+                entry = zip.nextEntry
+            }
+        }
+        val s = shared ?: run {
+            photoName?.let { File(photosDir, it).delete() }
+            throw IllegalArgumentException(
+                if (isBackup) "C'est une sauvegarde complète : utilise « Restaurer une sauvegarde »."
+                else "Ce fichier n'est pas un schéma MiniPaintCompanion."
+            )
+        }
+        val now = System.currentTimeMillis()
+        val imported = s.project.copy(
+            id = UUID.randomUUID().toString(),
+            photo = photoName,
+            createdAt = now,
+            updatedAt = now,
+            steps = s.project.steps.map { it.copy(id = UUID.randomUUID().toString()) },
+        )
+        mutate { d ->
+            val known = d.customPaints.map { it.id }.toSet()
+            d.copy(
+                projects = (d.projects + imported).sortedByDescending { it.createdAt },
+                customPaints = d.customPaints + s.customPaints.filter { it.id !in known },
+            )
+        }
+        imported
+    }
+
     private fun cleanOrphanPhotos() {
         // On laisse une marge d'une heure pour ne pas supprimer la photo d'un brouillon en cours.
         val used = _data.value.projects.mapNotNull { it.photo }.toSet()
@@ -239,6 +336,7 @@ class Repository private constructor(context: Context) {
 
     companion object {
         private const val BACKUP_JSON = "minipaint.json"
+        private const val SCHEMA_JSON = "schema.json"
         val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
 
         @Volatile private var instance: Repository? = null

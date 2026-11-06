@@ -23,6 +23,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.Inventory2
+import androidx.compose.material.icons.outlined.FormatColorFill
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
@@ -74,6 +75,7 @@ fun CollectionScreen(
             .groupBy({ it.first }, { it.second })
     }
     var selected by remember { mutableStateOf<Paint?>(null) }
+    var managingPrimers by remember { mutableStateOf(false) }
 
     if (owned.isEmpty()) {
         Column(modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -96,6 +98,19 @@ fun CollectionScreen(
     }
 
     Column(modifier) {
+        val primerCount = repo.primerIds(data).size
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .clickable { managingPrimers = true }
+                .padding(horizontal = 16.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(Icons.Outlined.FormatColorFill, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+            Spacer(Modifier.width(10.dp))
+            Text("Mes sous-couches ($primerCount)", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+            Text("Gérer", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelLarge)
+        }
         Row(
             Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -123,7 +138,7 @@ fun CollectionScreen(
                 val n = usage[p.id]?.size ?: 0
                 if (n > 0) {
                     Text(
-                        "$n proj.",
+                        "$n sch.",
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.padding(start = 8.dp),
@@ -142,6 +157,8 @@ fun CollectionScreen(
         )
     }
 
+    if (managingPrimers) PrimerManagerSheet(data, repo, onDismiss = { managingPrimers = false })
+
     selected?.let { p ->
         val used = usage[p.id].orEmpty()
         AlertDialog(
@@ -152,7 +169,7 @@ fun CollectionScreen(
                 Column {
                     Text("${p.brand.label} · ${p.range}", color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(Modifier.height(12.dp))
-                    if (used.isEmpty()) Text("Pas encore utilisé dans un projet.")
+                    if (used.isEmpty()) Text("Pas encore utilisé dans un schéma.")
                     else {
                         Text("Utilisé dans :")
                         used.forEach { Text("• ${it.name.ifBlank { "Sans titre" }}") }
@@ -237,7 +254,7 @@ private val PRESETS = listOf(
 /** Ajout d'un pot hors catalogue (autre marque, gamme manquante…). */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun CustomPaintDialog(repo: Repository, onDismiss: () -> Unit) {
+fun CustomPaintDialog(repo: Repository, onDismiss: () -> Unit, primer: Boolean = false) {
     var name by remember { mutableStateOf("") }
     var range by remember { mutableStateOf("") }
     var hex by remember { mutableStateOf("#C8553D") }
@@ -245,14 +262,14 @@ fun CustomPaintDialog(repo: Repository, onDismiss: () -> Unit) {
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Ajouter un pot perso") },
+        title = { Text(if (primer) "Ajouter une sous-couche perso" else "Ajouter un pot perso") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(name, { name = it }, label = { Text("Nom") }, singleLine = true)
                 OutlinedTextField(
                     range, { range = it },
-                    label = { Text("Marque / gamme") },
-                    placeholder = { Text("ex. Scale75, AK, Two Thin Coats") },
+                    label = { Text(if (primer) "Marque" else "Marque / gamme") },
+                    placeholder = { Text(if (primer) "ex. Tamiya, Mr. Surfacer, Stynylrez" else "ex. Scale75, Two Thin Coats") },
                     singleLine = true,
                 )
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -286,7 +303,11 @@ fun CustomPaintDialog(repo: Repository, onDismiss: () -> Unit) {
         confirmButton = {
             TextButton(
                 enabled = name.isNotBlank() && validHex,
-                onClick = { repo.addCustomPaint(name, range, hex.uppercase()); onDismiss() },
+                onClick = {
+                    if (primer) repo.addCustomPrimer(name, range, hex.uppercase())
+                    else repo.addCustomPaint(name, range, hex.uppercase())
+                    onDismiss()
+                },
             ) { Text("Ajouter") }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Annuler") } },

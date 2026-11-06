@@ -1,4 +1,11 @@
 ## @VERSION@ — @DATE@
+- Les projets s'appellent désormais des schémas (onglet « Mes schémas »).
+- Partage de schéma : en fichier MiniPaint (l'autre utilisateur l'ouvre et le schéma complet s'ajoute chez lui) ou en texte avec la photo pour un message ou un forum. Import aussi depuis le menu ⋮.
+- Nouveau catalogue AK Interactive 3rd Generation (230 couleurs, références AK11001 à AK11230, codes-barres compris) et primers AK.
+- Dilution par étape : de pur (0 %, par défaut) à 100 %, aussi reconnue à la dictée (« dilué à 30 % », « 1 pour 1 »).
+- Sous-couches : une étape peut être marquée « sous-couche » ; ses pots se choisissent dans une liste dédiée et personnalisable (bombes Citadel, Vallejo, Army Painter, AK, ou sous-couches perso), gérée depuis Mes peintures ou l'étape.
+
+## 1.0.18 — 06/11/2026
 - Les codes-barres des pots sont maintenant dans le catalogue : tous les Vallejo et Army Painter (calculés d'après la référence), et les 21 Citadel les plus courants. Le mode « Code-barres / QR » les reconnaît directement.
 - Catalogue Army Painter mis à jour avec la gamme Warpaints Fanatic : 192 pots avec leur référence WP (teintes des nouveaux pots estimées).
 - La recherche du catalogue accepte un code-barres (ou le début d'un code).

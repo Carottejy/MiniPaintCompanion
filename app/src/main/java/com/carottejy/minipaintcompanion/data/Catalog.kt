@@ -15,6 +15,7 @@ object Catalog {
             VALLEJO.forEach { (range, data) -> addAll(parse(Brand.VALLEJO, range, data)) }
             ARMY.forEach { (range, data) -> addAll(parse(Brand.ARMY_PAINTER, range, data)) }
             PRINCE.forEach { (range, data) -> addAll(parse(Brand.PRINCE_AUGUST, range, data)) }
+            AK.forEach { (range, data) -> addAll(parse(Brand.AK, range, data)) }
         }.distinctBy { it.id }
     }
 
@@ -30,7 +31,8 @@ object Catalog {
      * Codes-barres d'un pot :
      *  - Vallejo : 8429551 + référence à 5 chiffres (70.951 -> 70951) + clé ;
      *  - Army Painter : 5713799 + numéro WP + 0 (ou 2 sur certains pots) + clé ;
-     *  - Citadel : relevés un par un chez les revendeurs (plusieurs codes selon l'étiquette).
+     *  - Citadel : relevés un par un chez les revendeurs (plusieurs codes selon l'étiquette) ;
+     *  - AK 3rd Gen : numérotation séquentielle 843556830 + (référence − 10767) + clé.
      * Vérifié sur des codes publiés (Vallejo 70.951 et 70.919, Army Painter WP3001, WP3012, WP3118, WP3199…).
      */
     fun barcodesFor(p: Paint): List<String> = when (p.brand) {
@@ -42,8 +44,33 @@ object Catalog {
             val digits = p.code.removePrefix("WP").filter { it.isDigit() }
             if (digits.length == 4) listOf("0", "2").map { ean13("5713799$digits$it") } else emptyList()
         }
-        Brand.CITADEL -> CITADEL_EAN[p.name].orEmpty()
+        Brand.CITADEL -> if (isPrimer(p)) emptyList() else CITADEL_EAN[p.name].orEmpty()
+        Brand.AK -> {
+            // 843556830 + (référence − 10767) + clé, vérifié sur AK11044, 11049, 11050, 11056 et 11087.
+            val n = p.code.removePrefix("AK").toIntOrNull()
+            if (n != null && n in 11001..11230) listOf(ean13("843556830" + (n - 10767).toString().padStart(3, '0')))
+            else emptyList()
+        }
         else -> emptyList()
+    }
+
+    // ------------------------------------------------------------ sous-couches
+
+    /** Une sous-couche : bombe, primer, ou pot perso classé « Sous-couche ». */
+    fun isPrimer(p: Paint): Boolean {
+        val r = p.range.lowercase()
+        return "primer" in r || "bombe" in r || "spray" in r || "sous-couche" in r
+    }
+
+    /** Liste de sous-couches proposée par défaut (modifiable par l'utilisateur). */
+    val defaultPrimerIds: Set<String> by lazy {
+        val wanted = listOf(
+            Brand.CITADEL to "Chaos Black", Brand.CITADEL to "Wraithbone", Brand.CITADEL to "Grey Seer",
+            Brand.CITADEL to "Corax White", Brand.VALLEJO to "Black", Brand.VALLEJO to "White", Brand.VALLEJO to "Grey",
+            Brand.ARMY_PAINTER to "Matt Black", Brand.ARMY_PAINTER to "Matt White", Brand.ARMY_PAINTER to "Uniform Grey",
+            Brand.AK to "Black Primer", Brand.AK to "White Primer",
+        )
+        all.filter { isPrimer(it) && (it.brand to it.name) in wanted }.map { it.id }.toSet()
     }
 
     /** Index code-barres -> identifiant du pot. */
@@ -270,6 +297,21 @@ object Catalog {
             |Underhive Ash|#BAB78F
             |Verminlord Hide|#A16954
             |Wrack White|#D8D8D8
+        """,
+        "Spray" to """
+            |Chaos Black|#1A1A1A
+            |Corax White|#F2F2F2
+            |Wraithbone|#DBD1B2
+            |Grey Seer|#A2A5A7
+            |Mechanicus Standard Grey|#3D4B4D
+            |Leadbelcher|#888D8F
+            |Retributor Armour|#B0874A
+            |Macragge Blue|#0D407F
+            |Mephiston Red|#9A1115
+            |Death Guard Green|#848A66
+            |Zandri Dust|#988E56
+            |Averland Sunset|#FDB825
+            |Caliban Green|#00401F
         """,
         "Technical" to """
             |Ardcoat|#EDEDED
@@ -726,6 +768,248 @@ object Catalog {
             |Pure Red|#B81E1E
             |Ultramarine Blue|#2A4A8A
             |Plate Mail Metal|#9A9EA2
+        """,
+    )
+
+    // -------------------------------------------------------------- AK Interactive
+    // Gamme 3rd Generation (références AK11001 à AK11230). Teintes estimées d'après le nom.
+    private val AK = listOf(
+        "Primer" to """
+            AK11242|Black Primer|#1A1A1A
+            |White Primer|#F2F2F2
+            |Grey Primer|#8A8E92
+        """,
+        "3rd Gen" to """
+            AK11001|Intense White|#F6F6F4
+            AK11002|Offwhite|#EAE6DA
+            AK11003|White Grey|#B8B8B8
+            AK11004|Ivory|#E8DFC4
+            AK11005|Greenish Grey|#7F7F7F
+            AK11006|Silver Grey|#B8B8B8
+            AK11007|Rock Grey|#7F7F7F
+            AK11008|Grimy Grey|#4C4C4C
+            AK11009|Warm Grey|#B8B8B8
+            AK11010|Medium Grey|#7F7F7F
+            AK11011|Blue Grey|#77818C
+            AK11012|Sky Grey|#B6BFC8
+            AK11013|Pale Grey|#B8B8B8
+            AK11014|Medium Sea Grey|#B6BFC8
+            AK11015|Dark Sea Grey|#464D54
+            AK11016|Grey Green|#6F7F6C
+            AK11017|Reddish Grey|#7F7F7F
+            AK11018|Neutral Grey|#7F7F7F
+            AK11019|Graphite|#3E4044
+            AK11020|English Grey|#7F7F7F
+            AK11021|Basalt Grey|#4C4C4C
+            AK11022|Dark Grey|#4C4C4C
+            AK11023|Lead Grey|#4C4C4C
+            AK11024|Ash Grey|#7F7F7F
+            AK11025|German Grey|#4C4C4C
+            AK11026|Tenebrous Grey|#4C4C4C
+            AK11027|Rubber Black|#2A2A2C
+            AK11028|Smoke Black|#303236
+            AK11029|Black|#161616
+            AK11030|Beige|#D9C69A
+            AK11031|Buff|#C8A97A
+            AK11032|Pale Sand|#DFCBA9
+            AK11033|Dark Sand|#5E4F35
+            AK11034|Medium Sand|#9E865E
+            AK11035|Sand Yellow|#9E865E
+            AK11036|Ice Yellow|#FFE684
+            AK11037|Pastel Yellow|#FFE684
+            AK11038|Pale Yellow|#FFE684
+            AK11039|Purulent Yellow|#E0BC2C
+            AK11040|Sahara Yellow|#E0BC2C
+            AK11041|Golden Yellow|#E0BC2C
+            AK11042|Volcanic Yellow|#E0BC2C
+            AK11043|Dirty Yellow|#866E10
+            AK11044|Yellow|#E0BC2C
+            AK11045|Deep Yellow|#866E10
+            AK11046|Radiant Yellow|#FFE684
+            AK11047|Lemon Yellow|#F2EB24
+            AK11048|Laser Yellow|#F2EB24
+            AK11049|Fluorescent Yellow|#F2EB24
+            AK11050|Light Flesh|#FFD8C1
+            AK11051|Luminous Flesh|#FFD8C1
+            AK11052|Basic Skin Tone|#C69477
+            AK11053|Radiant Flesh|#FFD8C1
+            AK11054|Medium Flesh Tone|#C69477
+            AK11055|Sunny Skin Tone|#C69477
+            AK11056|Dark Flesh|#775642
+            AK11057|Vampiric Flesh|#C69477
+            AK11058|Decomposed Flesh|#C69477
+            AK11059|Pastel Pink|#FFB2D8
+            AK11060|Sickly Pink|#C66395
+            AK11061|Salmon|#E88A7A
+            AK11062|Old Rose|#B8787A
+            AK11063|Brown Rose|#603C26
+            AK11064|Beige Red|#992125
+            AK11065|Intense Pink|#FFB2D8
+            AK11066|Laser Magenta|#C66395
+            AK11067|Magenta|#C66395
+            AK11068|Fluorescent Magenta|#C66395
+            AK11069|Pastel Violet|#9376A8
+            AK11070|Blue Violet|#5A3972
+            AK11071|Lilac|#B89AC8
+            AK11072|Deep Violet|#351E44
+            AK11073|Purple|#5A3972
+            AK11074|Deep Purple|#351E44
+            AK11075|Violet Red|#5A3972
+            AK11076|Pastel Peach|#FFD8C1
+            AK11077|Light Orange|#FFB07C
+            AK11078|Medium Orange|#E06D21
+            AK11079|Burn Orange|#E06D21
+            AK11080|Deep Orange|#863B08
+            AK11081|Fluorescent Orange|#E06D21
+            AK11082|Luminous Orange|#FFB07C
+            AK11083|Dead Orange|#863B08
+            AK11084|Ruby|#8A1A2A
+            AK11085|Cadmium Red|#992125
+            AK11086|Amaranth Red|#992125
+            AK11087|Scarlet Red|#992125
+            AK11088|Deep Red|#5B0D0F
+            AK11089|Blood Red|#992125
+            AK11090|Vermillion|#D83A23
+            AK11091|Carmine|#9A1A2A
+            AK11092|Matt Red|#992125
+            AK11093|Brick Red|#992125
+            AK11094|Bordeaux Red|#5B0D0F
+            AK11095|Dirty Red|#5B0D0F
+            AK11096|Wine Red|#5B0D0F
+            AK11097|Burnt Red|#5B0D0F
+            AK11098|Black Red|#5B0D0F
+            AK11099|Ocher Orange|#9E865E
+            AK11100|Light Brown|#92715D
+            AK11101|Orange Brown|#603C26
+            AK11102|Deep Brown|#3A2113
+            AK11103|Medium Rust|#603C26
+            AK11104|Saddle Brown|#603C26
+            AK11105|Light Rust|#92715D
+            AK11106|Mahogany Brown|#603C26
+            AK11107|Dark Rust|#3A2113
+            AK11108|Hull Red|#603C26
+            AK11109|Dark Brown|#3A2113
+            AK11110|Leather Brown|#603C26
+            AK11111|Burnt Umber|#3A2113
+            AK11112|Grim Brown|#3A2113
+            AK11113|Chocolate Chipping|#603C26
+            AK11114|Deck Tan|#9E865E
+            AK11115|Light Earth|#DFCBA9
+            AK11116|Tan Yellow|#9E865E
+            AK11117|Golden Brown|#603C26
+            AK11118|Ochre|#9E865E
+            AK11119|Cork|#A8784A
+            AK11120|Mud Brown|#603C26
+            AK11121|Tan Earth|#9E865E
+            AK11122|Green Ochre|#9E865E
+            AK11123|Japanese Brown|#603C26
+            AK11124|Middle Stone|#9E865E
+            AK11125|Grey Brown|#7F7F7F
+            AK11126|Green Brown|#603C26
+            AK11127|British Khaki|#9E865E
+            AK11128|Luminous Green|#CFFF8C
+            AK11129|Fluorescent Green|#83BF2F
+            AK11130|Pistachio|#A8C07A
+            AK11131|Pastel Green|#6A9F73
+            AK11132|Green Grey|#6F7F6C
+            AK11133|Dark Green Grey|#414C3F
+            AK11134|Green Sky|#ABB8A8
+            AK11135|Faded Green|#576B3A
+            AK11136|Frog Green|#576B3A
+            AK11137|Lime Green|#83BF2F
+            AK11138|Interior Yellow Green|#E0BC2C
+            AK11139|Golden Olive|#576B3A
+            AK11140|Grass Green|#306B3A
+            AK11141|Light Green|#6A9F73
+            AK11142|Deep Green|#19401F
+            AK11143|Mint Green|#9AD4B0
+            AK11144|Emerald|#1E8A5A
+            AK11145|Lizard Green|#576B3A
+            AK11146|Dark Green|#19401F
+            AK11147|Olive Green|#576B3A
+            AK11148|Medium Olive Green|#576B3A
+            AK11149|Intermediate Green|#306B3A
+            AK11150|Gunship Green|#576B3A
+            AK11151|Brownish Green|#603C26
+            AK11152|Alga Green|#576B3A
+            AK11153|Extra Dark Green|#19401F
+            AK11154|German Field Grey|#414C3F
+            AK11155|Command Green|#576B3A
+            AK11156|Camouflage Green|#576B3A
+            AK11157|US Dark Green|#334020
+            AK11158|Reflective Green|#576B3A
+            AK11159|Russian Green|#576B3A
+            AK11160|Black Green|#19401F
+            AK11161|Pale Blue|#7E99C8
+            AK11162|Spectrum Blue|#35558C
+            AK11163|Intermediate Blue|#35558C
+            AK11164|Dark Blue Grey|#464D54
+            AK11165|Grey Blue|#77818C
+            AK11166|French Blue|#35558C
+            AK11167|Anthracite Grey|#7F7F7F
+            AK11168|Pastel Blue|#7E99C8
+            AK11169|Blue Green|#306B3A
+            AK11170|Aquatic Turquoise|#3D9999
+            AK11171|Turquoise|#3D9999
+            AK11172|Archaic Turquoise|#3D9999
+            AK11173|Ocean Blue|#35558C
+            AK11174|Snow Blue|#7E99C8
+            AK11175|Sky Blue|#7E99C8
+            AK11176|Deep Sky Blue|#4D6082
+            AK11177|Ducat Blue|#35558C
+            AK11178|Fluorescent Blue|#35558C
+            AK11179|Ultramarine|#35558C
+            AK11180|Imperial Blue|#35558C
+            AK11181|Dark Blue|#1A2F54
+            AK11182|Deep Blue|#1A2F54
+            AK11183|Amethyst Blue|#5A3972
+            AK11184|Medium Blue|#35558C
+            AK11185|Star Blue|#35558C
+            AK11186|Light Prussian Blue|#8D9F74
+            AK11187|Strong Dark Blue|#1A2F54
+            AK11188|Oxford|#1E2A44
+            AK11189|Dark Prussian Blue|#334020
+            AK11190|Dark Sea Blue|#1A2F54
+            AK11191|Gold|#C8A040
+            AK11192|Old Gold|#9A7A3A
+            AK11193|Rusty Gold|#8A6A30
+            AK11194|Brass|#B08A3A
+            AK11195|Rusty Brass|#8A6A3A
+            AK11196|Bronze|#8A6A3A
+            AK11197|Copper|#A8643A
+            AK11198|Burnt Tin|#5A5048
+            AK11199|Metallic Blue|#3A5A9A
+            AK11200|Astral Beryllium|#8AA0B8
+            AK11201|Cobalt Blue|#2A4A8A
+            AK11202|Anodized Violet|#6A4A8A
+            AK11203|Foundry Red|#8A2A22
+            AK11204|Emerald Metallic Green|#1E6A4A
+            AK11205|Metallic Green|#3A7A4A
+            AK11206|Pearl|#E6E2DA
+            AK11207|Aluminium|#B8BCC0
+            AK11208|Dark Aluminum|#8A8E92
+            AK11209|Silver|#C0C4C8
+            AK11210|Natural Steel|#8A8E92
+            AK11211|Oily Steel|#6A6E72
+            AK11212|Gun Metal|#5A5E62
+            AK11213|Clear Red|#C8202A
+            AK11214|Clear Blue|#2A5AC8
+            AK11215|Clear Smoke|#4A4440
+            AK11216|Clear Green|#2A9A3A
+            AK11217|Clear Yellow|#F0D020
+            AK11218|Clear Orange|#F07A1E
+            AK11219|Sepia Ink|#7A4E22
+            AK11220|Turquoise Ink|#1E7A7A
+            AK11221|Skin Ink|#8A4A2E
+            AK11222|Sooty Black Ink|#1C1A18
+            AK11223|Carbon Black Ink|#121212
+            AK11224|Purple Ink|#4A2A55
+            AK11225|Luminous Green Ink|#3AAA2A
+            AK11226|Dark Green Ink|#1E3F2A
+            AK11227|Penetrating Red Ink|#6E1A1E
+            AK11228|Night Blue Ink|#141E3A
+            AK11229|Burnt Umber Ink|#4A3022
+            AK11230|Titanium White|#FAFAF8
         """,
     )
 

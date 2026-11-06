@@ -46,6 +46,9 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Slider
+import androidx.compose.material3.Switch
+import kotlin.math.roundToInt
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -109,7 +112,7 @@ fun ProjectEditorScreen(
     // Le brouillon est sérialisé en JSON pour survivre à la rotation et au retour de l'appareil photo.
     val originalJson = rememberSaveable {
         val existing = data.projects.firstOrNull { it.id == projectId }
-        encode(existing ?: Project(id = UUID.randomUUID().toString(), steps = listOf(newStep().copy(title = "Sous-couche"))))
+        encode(existing ?: Project(id = UUID.randomUUID().toString(), steps = listOf(newStep().copy(title = "Sous-couche", primer = true))))
     }
     var draftJson by rememberSaveable { mutableStateOf(originalJson) }
     val draft = remember(draftJson) { decode(draftJson) }
@@ -120,6 +123,7 @@ fun ProjectEditorScreen(
 
     var pendingPhoto by rememberSaveable { mutableStateOf<String?>(null) }
     var pickingStepId by rememberSaveable { mutableStateOf<String?>(null) }
+    var managingPrimers by remember { mutableStateOf(false) }
     var confirmDiscard by remember { mutableStateOf(false) }
 
     // ---------------------------------------------------------------- dictée vocale
@@ -141,7 +145,10 @@ fun ProjectEditorScreen(
                 val added = parsed.map { ps ->
                     val t = ps.technique ?: last
                     last = t
-                    newStep().copy(title = ps.title, technique = t, paintIds = ps.paintIds, notes = ps.notes)
+                    newStep().copy(
+                        title = ps.title, technique = t, paintIds = ps.paintIds, notes = ps.notes,
+                        dilution = ps.dilution ?: 0, primer = ps.primer,
+                    )
                 }
                 // L'étape « Sous-couche » vide créée par défaut est remplacée par la dictée.
                 val base = p.steps.toMutableList()
@@ -236,7 +243,7 @@ fun ProjectEditorScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(if (projectId == null) "Nouveau projet" else "Modifier") },
+                title = { Text(if (projectId == null) "Nouveau schéma" else "Modifier") },
                 navigationIcon = {
                     IconButton(onClick = { if (dirty) confirmDiscard = true else onDone(null) }) {
                         Icon(Icons.Default.Close, contentDescription = "Fermer")
@@ -377,23 +384,52 @@ fun ProjectEditorScreen(
                 }
                 Button(onClick = { pickingStepId = null }) { Text("OK") }
             }
-            PaintBrowser(
-                paints = repo.allPaints(data),
-                ownedIds = data.ownedPaintIds,
-                isChecked = { it.id in pickingStep.paintIds },
-                onToggle = { paint, checked ->
-                    updateStep(pickingStep.id) { s ->
-                        s.copy(paintIds = if (checked) (s.paintIds + paint.id).distinct() else s.paintIds - paint.id)
-                    }
-                },
-                showOwnedFilter = true,
-                initialOnlyOwned = data.ownedPaintIds.isNotEmpty(),
-                showToBuy = true,
-                contentPadding = PaddingValues(bottom = 32.dp),
-                modifier = Modifier.fillMaxSize(),
-            )
+            val onTogglePaint: (com.carottejy.minipaintcompanion.data.Paint, Boolean) -> Unit = { paint, checked ->
+                updateStep(pickingStep.id) { s ->
+                    s.copy(paintIds = if (checked) (s.paintIds + paint.id).distinct() else s.paintIds - paint.id)
+                }
+            }
+            if (pickingStep.primer) {
+                // Étape de sous-couche : ma liste dédiée, modifiable.
+                val primerIds = repo.primerIds(data)
+                Row(
+                    Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        "Mes sous-couches",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.weight(1f),
+                    )
+                    TextButton(onClick = { managingPrimers = true }) { Text("Gérer ma liste") }
+                }
+                PaintBrowser(
+                    paints = repo.allPrimers(data).filter { it.id in primerIds || it.id in pickingStep.paintIds },
+                    ownedIds = data.ownedPaintIds,
+                    isChecked = { it.id in pickingStep.paintIds },
+                    onToggle = onTogglePaint,
+                    emptyText = "Ta liste de sous-couches est vide : touche « Gérer ma liste » pour en ajouter.",
+                    contentPadding = PaddingValues(bottom = 32.dp),
+                    modifier = Modifier.fillMaxSize(),
+                )
+            } else {
+                PaintBrowser(
+                    paints = repo.allPaints(data),
+                    ownedIds = data.ownedPaintIds,
+                    isChecked = { it.id in pickingStep.paintIds },
+                    onToggle = onTogglePaint,
+                    showOwnedFilter = true,
+                    initialOnlyOwned = data.ownedPaintIds.isNotEmpty(),
+                    showToBuy = true,
+                    contentPadding = PaddingValues(bottom = 32.dp),
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
         }
     }
+
+    if (managingPrimers) PrimerManagerSheet(data, repo, onDismiss = { managingPrimers = false })
 
     voiceTarget?.let { target ->
         DictationDialog(
@@ -474,7 +510,10 @@ private fun StepEditorCard(
                 if (step.title.isBlank()) {
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         STEP_SUGGESTIONS.forEach { s ->
-                            SuggestionChip(onClick = { onChange { it.copy(title = s) } }, label = { Text(s) })
+                            SuggestionChip(
+                                onClick = { onChange { it.copy(title = s, primer = it.primer || s == "Sous-couche") } },
+                                label = { Text(s) },
+                            )
                         }
                     }
                 }
@@ -491,7 +530,38 @@ private fun StepEditorCard(
                         )
                     }
                 }
-                Spacer(Modifier.height(6.dp))
+                Row(
+                    Modifier.fillMaxWidth().padding(top = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text("Étape de sous-couche", style = MaterialTheme.typography.bodyMedium)
+                        Text(
+                            "Les pots se choisissent dans ta liste de sous-couches",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Switch(
+                        checked = step.primer,
+                        onCheckedChange = { on -> onChange { it.copy(primer = on, title = if (on && it.title.isBlank()) "Sous-couche" else it.title) } },
+                    )
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        if (step.dilution == 0) "Dilution : pure (0 %)" else "Dilution : ${step.dilution} %",
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.width(150.dp),
+                    )
+                    Slider(
+                        value = step.dilution.toFloat(),
+                        onValueChange = { v -> onChange { it.copy(dilution = (v / 5).roundToInt() * 5) } },
+                        valueRange = 0f..100f,
+                        steps = 19,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+                Spacer(Modifier.height(2.dp))
                 step.paintIds.forEach { id ->
                     val p = paintsById[id] ?: return@forEach
                     PaintLine(p, owned = p.id in data.ownedPaintIds, trailing = {
@@ -503,7 +573,14 @@ private fun StepEditorCard(
                 TextButton(onClick = onPickPaints) {
                     Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text(if (step.paintIds.isEmpty()) "Choisir les pots" else "Modifier les pots")
+                    Text(
+                        when {
+                            step.primer && step.paintIds.isEmpty() -> "Choisir la sous-couche"
+                            step.primer -> "Modifier la sous-couche"
+                            step.paintIds.isEmpty() -> "Choisir les pots"
+                            else -> "Modifier les pots"
+                        }
+                    )
                 }
                 OutlinedTextField(
                     value = step.notes,

@@ -18,6 +18,9 @@ object VoiceParser {
         val technique: Technique?,
         val paintIds: List<String>,
         val notes: String,
+        /** Dilution en %, null si non dite. */
+        val dilution: Int? = null,
+        val primer: Boolean = false,
     )
 
     private val STEP_SEPARATORS = Regex("""\b(?:étape suivante|etape suivante|nouvelle étape|nouvelle etape|ensuite|puis|et après|et apres)\b""", RegexOption.IGNORE_CASE)
@@ -43,6 +46,7 @@ object VoiceParser {
         Brand.VALLEJO to listOf("vallejo", "valejo", "valleyo", "valeo"),
         Brand.ARMY_PAINTER to listOf("army painter", "army"),
         Brand.PRINCE_AUGUST to listOf("prince august", "prince auguste"),
+        Brand.AK to listOf("ak interactive", "3rd gen", "3 gen", "3g"),
     )
 
     private val NOTE_KEYWORDS = Regex("""\b(?:note|notes|remarque|astuce|attention)\b\s*:?\s*""", RegexOption.IGNORE_CASE)
@@ -88,7 +92,32 @@ object VoiceParser {
         val notes = (hints + explicitNote).filter { it.isNotBlank() }.joinToString(". ")
             .replaceFirstChar { it.uppercase() }
 
-        return ParsedStep(title, technique, matchPaints(norm, paints, ownedIds), notes)
+        return ParsedStep(
+            title, technique, matchPaints(norm, paints, ownedIds), notes,
+            dilution = parseDilution(norm),
+            primer = title == "Sous-couche",
+        )
+    }
+
+    private val NUMBERS = mapOf("un" to 1, "une" to 1, "deux" to 2, "trois" to 3, "quatre" to 4)
+
+    /**
+     * Dilution dite à voix haute : « dilué à 30 % », « 50 pour cent d'eau »,
+     * « 1 pour 1 » (50 %), « 2 pour 1 » (2 de peinture pour 1 d'eau, 33 %).
+     */
+    fun parseDilution(norm: String): Int? {
+        Regex("""(\d{1,3})\s?(?:%|pour ?cent|pourcent)""").find(norm)?.let {
+            return it.groupValues[1].toInt().coerceIn(0, 100)
+        }
+        val n = """(\d|un|une|deux|trois|quatre)"""
+        Regex("""$n pour $n""").find(norm)?.let { m ->
+            val paint = m.groupValues[1].let { NUMBERS[it] ?: it.toIntOrNull() } ?: return null
+            val water = m.groupValues[2].let { NUMBERS[it] ?: it.toIntOrNull() } ?: return null
+            if (paint + water == 0) return null
+            return Math.round(water * 100.0 / (paint + water) / 5).toInt() * 5
+        }
+        if (Regex("""\bpur(e)?\b|sans dilu""").containsMatchIn(norm)) return 0
+        return null
     }
 
     private data class Hit(val paint: Paint, val start: Int, val end: Int, val score: Double)
@@ -157,7 +186,7 @@ object VoiceParser {
         "base" to "Base", "layer" to "Layer", "shade" to "Shade", "contrast" to "Contrast",
         "dry" to "Dry", "technical" to "Technical", "model color" to "Model Color", "game color" to "Game Color",
         "model air" to "Model Air", "xpress" to "Xpress Color", "speedpaint" to "Speedpaint",
-        "warpaints" to "Warpaints", "fanatic" to "Warpaints", "quickshade" to "Quickshade Wash", "wash" to "Wash",
+        "warpaints" to "Warpaints", "fanatic" to "Warpaints", "3rd gen" to "3rd Gen", "primer" to "Primer", "spray" to "Spray", "quickshade" to "Quickshade Wash", "wash" to "Wash",
     )
 
     /**
@@ -227,6 +256,8 @@ object VoiceParser {
     fun merge(step: Step, parsed: ParsedStep): Step = step.copy(
         title = step.title.ifBlank { parsed.title },
         technique = parsed.technique ?: step.technique,
+        dilution = parsed.dilution ?: step.dilution,
+        primer = step.primer || parsed.primer,
         paintIds = (step.paintIds + parsed.paintIds).distinct(),
         notes = listOf(step.notes, parsed.notes).filter { it.isNotBlank() }.joinToString("\n"),
     )

@@ -2,19 +2,23 @@
 
 Carnet de peinture de figurines pour Android.
 
-- **Mes projets** : photo de la figurine terminée (appareil photo ou galerie), nom, notes, et toutes les étapes de peinture.
+- **Mes schémas** : photo de la figurine terminée (appareil photo ou galerie), nom, notes, et toutes les étapes de peinture.
 - **Étapes** : titre (sous-couche, aplats, lavis…), technique **pinceau** ou **aérographe**, pots utilisés, notes (dilution, pression…). Réordonnables.
 - **Dictée vocale** : dans un projet, le bouton « Dicter » crée une ou plusieurs étapes à partir d'une phrase (« Aplats au pinceau avec Macragge Blue, dilué 1 pour 1, ensuite lavis avec Nuln Oil ») ; le micro d'une étape la complète. Titre, technique, pots (reconnaissance tolérante aux fautes de transcription, références Vallejo comprises) et notes (dilution, pression…) sont remplis automatiquement.
 - **Mes peintures** : les pots que tu possèdes, cochés depuis le catalogue ou **identifiés à la caméra** (étiquette ou QR code) ; pots perso pour les autres marques. Un pot presque vide se marque « à racheter ».
 - **Achat** : la liste des pots à acheter/racheter (depuis la collection, le catalogue, une réalisation ou l'onglet Couleurs). Cocher un pot acheté — ou le scanner — le fait passer dans la collection. Liste partageable.
 - **Théorie** : roue chromatique du peintre (RJB) ou de la lumière (RVB), harmonies (complémentaire, adjacentes, analogue, triade, rectangle, carré, camaïeu) et ombre/lumière ; pour chaque couleur, les pots du catalogue ou de ta collection les plus proches (écart ΔE en L*a*b*).
-- **Catalogue** (onglet) : Citadel, Vallejo (Model Color, Game Color, Model Air, Xpress, lavis), The Army Painter (Warpaints, Quickshade, Speedpaint, bombes), Prince August — recherche par nom ou référence, filtres marque/gamme.
+- **Catalogue** (onglet) : Citadel (dont bombes), Vallejo (Model Color, Game Color, Model Air, Xpress, lavis, Surface Primer), The Army Painter (Warpaints Fanatic, Quickshade, Speedpaint, bombes), AK Interactive (3rd Generation, primers), Prince August — recherche par nom ou référence, filtres marque/gamme.
 
 - **Sauvegarde / restauration** (menu ⋮) : exporte toutes les réalisations, photos, la collection et les pots perso dans un `.zip` (Drive, Téléchargements…), et le réimporte sur un autre téléphone.
 
 Les données restent sur le téléphone (fichier JSON + photos dans l'espace privé de l'app) ; pense à faire une sauvegarde avant de changer d'appareil.
 
 - **Pipette** : sur une photo, un curseur relève une couleur (moyenne de quelques pixels) ; l'appli propose les pots les plus proches (ΔE L*a*b*), à ajouter à la liste d'achat. Jusqu'à 8 couleurs épinglées pour composer une palette.
+
+## Partage de schéma
+
+Fichier `<nom>.minipaint.zip` : `schema.json` (schéma + pots perso utilisés, format `SharedSchema`) et `photo.jpg`. Les pots du catalogue sont référencés par identifiant (identique sur tous les téléphones). L'appli s'enregistre pour ouvrir les `application/zip` reçus (VIEW/SEND) ; l'import crée un nouveau schéma sans rien écraser.
 
 ## Identifier un pot
 
@@ -23,7 +27,8 @@ Caméra intégrée (CameraX), deux modes :
 - **Code-barres / QR** : EAN-13/8, UPC et QR. Codes du catalogue (`Catalog.barcodesFor`) :
   - Vallejo : `8429551` + référence sur 5 chiffres + clé (ex. 70.951 → 8429551709514) ;
   - Army Painter Warpaints Fanatic : `5713799` + numéro WP + `0` (ou `2`, ex. WP3001) + clé ;
-  - Citadel : pas de règle, 21 pots courants relevés chez les revendeurs (plusieurs codes selon l'étiquette).
+  - Citadel : pas de règle, 21 pots courants relevés chez les revendeurs (plusieurs codes selon l'étiquette) ;
+  - AK 3rd Gen : `843556830` + (référence − 10767) + clé (vérifié sur 5 codes publiés).
   Un code inconnu est associé au pot choisi puis mémorisé (inclus dans la sauvegarde).
 
 ## Mise à jour automatique

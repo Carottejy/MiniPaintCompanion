@@ -54,7 +54,7 @@ fun ShoppingScreen(
             EmptyState(
                 Icons.Outlined.ShoppingCart,
                 "Rien à acheter",
-                "Ajoute des pots depuis le catalogue, ta collection (pot vide à racheter), un projet ou l'onglet Théorie.",
+                "Ajoute des pots depuis le catalogue, ta collection (pot vide à racheter), un schéma ou l'onglet Théorie.",
                 Modifier.weight(1f),
             )
             Button(onClick = onOpenCatalog, modifier = Modifier.padding(bottom = 120.dp)) { Text("Ouvrir le catalogue") }

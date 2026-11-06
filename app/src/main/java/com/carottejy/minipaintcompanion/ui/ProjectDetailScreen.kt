@@ -25,6 +25,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -63,6 +64,7 @@ fun ProjectDetailScreen(
     val project = data.projects.firstOrNull { it.id == projectId }
     var confirmDelete by remember { mutableStateOf(false) }
     var fullPhoto by remember { mutableStateOf(false) }
+    var sharing by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -73,6 +75,7 @@ fun ProjectDetailScreen(
                 },
                 actions = {
                     if (project != null) {
+                        IconButton(onClick = { sharing = true }) { Icon(Icons.Outlined.Share, contentDescription = "Partager") }
                         IconButton(onClick = onEdit) { Icon(Icons.Outlined.Edit, contentDescription = "Modifier") }
                         IconButton(onClick = { confirmDelete = true }) { Icon(Icons.Outlined.Delete, contentDescription = "Supprimer") }
                     }
@@ -83,7 +86,7 @@ fun ProjectDetailScreen(
     ) { padding ->
         if (project == null) {
             Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                Text("Ce projet n'existe plus.")
+                Text("Ce schéma n'existe plus.")
             }
             return@Scaffold
         }
@@ -205,6 +208,12 @@ fun ProjectDetailScreen(
                             )
                             TechniqueBadge(step.technique)
                         }
+                        if (step.primer || step.dilution > 0) {
+                            Row(Modifier.padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                if (step.primer) InfoChip("Sous-couche")
+                                if (step.dilution > 0) InfoChip("Dilution ${step.dilution} %")
+                            }
+                        }
                         step.paintIds.mapNotNull { paintsById[it] }.forEach { p ->
                             PaintLine(p, owned = p.id in data.ownedPaintIds)
                         }
@@ -233,10 +242,14 @@ fun ProjectDetailScreen(
         }
     }
 
+    if (sharing && project != null) {
+        ShareSchemaDialog(project, data, repo, onDismiss = { sharing = false })
+    }
+
     if (confirmDelete && project != null) {
         AlertDialog(
             onDismissRequest = { confirmDelete = false },
-            title = { Text("Supprimer ce projet ?") },
+            title = { Text("Supprimer ce schéma ?") },
             text = { Text("La photo et toutes les étapes de « ${project.name.ifBlank { "Sans titre" }} » seront effacées.") },
             confirmButton = {
                 TextButton(onClick = {

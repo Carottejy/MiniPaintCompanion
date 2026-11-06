@@ -7,6 +7,7 @@ enum class Brand(val label: String) {
     VALLEJO("Vallejo"),
     ARMY_PAINTER("The Army Painter"),
     PRINCE_AUGUST("Prince August"),
+    AK("AK Interactive"),
     CUSTOM("Perso"),
 }
 
@@ -37,6 +38,10 @@ data class Step(
     val technique: Technique = Technique.BRUSH,
     val paintIds: List<String> = emptyList(),
     val notes: String = "",
+    /** Dilution en % (eau ou medium), 0 = pur. */
+    val dilution: Int = 0,
+    /** Étape de sous-couche : les pots se choisissent dans la liste dédiée. */
+    val primer: Boolean = false,
 )
 
 @Serializable
@@ -59,4 +64,14 @@ data class AppData(
     val toBuyIds: Set<String> = emptySet(),
     /** Codes-barres appris : code EAN/UPC -> identifiant du pot. */
     val barcodes: Map<String, String> = emptyMap(),
+    /** Ma liste de sous-couches ; null = liste par défaut. */
+    val primerIds: Set<String>? = null,
+)
+
+/** Contenu d'un fichier de partage de schéma. */
+@Serializable
+data class SharedSchema(
+    val format: Int = 1,
+    val project: Project,
+    val customPaints: List<Paint> = emptyList(),
 )

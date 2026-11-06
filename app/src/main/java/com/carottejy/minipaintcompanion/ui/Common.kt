@@ -72,6 +72,7 @@ fun Brand.shortLabel(): String = when (this) {
     Brand.VALLEJO -> "Vallejo"
     Brand.ARMY_PAINTER -> "Army Painter"
     Brand.PRINCE_AUGUST -> "Prince August"
+    Brand.AK -> "AK"
     Brand.CUSTOM -> "Perso"
 }
 
@@ -201,4 +202,18 @@ fun EmptyState(icon: ImageVector, title: String, body: String, modifier: Modifie
             textAlign = androidx.compose.ui.text.style.TextAlign.Center,
         )
     }
+}
+
+/** Petite étiquette d'information (sous-couche, dilution…). */
+@Composable
+fun InfoChip(text: String, modifier: Modifier = Modifier) {
+    Text(
+        text,
+        style = MaterialTheme.typography.labelMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = modifier
+            .clip(RoundedCornerShape(50))
+            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+            .padding(horizontal = 10.dp, vertical = 3.dp),
+    )
 }
