@@ -1,4 +1,8 @@
 ## @VERSION@ — @DATE@
+- Dossiers : range tes schémas (bouton « Dossier » dans « Mes schémas », appui long sur un schéma ou ligne « Dossier » de sa fiche). Un nouveau schéma créé dans un dossier y est rangé ; supprimer un dossier ne supprime pas ses schémas.
+- Chaque dossier peut être rendu visible par tes amis : tous les schémas qui y sont rangés le deviennent, et tes amis les voient regroupés sous le nom du dossier.
+
+## 1.0.26 — 07/11/2026
 - Amis : bouton 👥 en haut de « Mes schémas ». Choisis un pseudo (sans compte), donne ton code ami (ex. MPC-7K4QXZ) ou saisis celui d'un ami, puis accepte les invitations reçues.
 - Sur la fiche d'un schéma, l'interrupteur « Visible par mes amis » le partage avec tes amis ; ses modifications suivent automatiquement (même après une coupure réseau).
 - Consulte les schémas de tes amis : photo, étapes, mélanges, pots que tu possèdes ou non, ajout des pots manquants à ta liste d'achat, et « Copier dans mes schémas ».

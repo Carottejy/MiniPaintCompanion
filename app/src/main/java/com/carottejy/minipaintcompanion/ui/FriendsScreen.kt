@@ -32,6 +32,7 @@ import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Group
+import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.PersonAdd
 import androidx.compose.material.icons.outlined.PersonRemove
@@ -468,8 +469,31 @@ fun FriendSchemasScreen(
                 error?.let { e ->
                     item(span = { GridItemSpan(maxLineSpan) }) { Text(e, color = MaterialTheme.colorScheme.secondary) }
                 }
-                items(r.schemas, key = { it.projectId }) { s ->
-                    SchemaCard(s.schema.project, s.photoUrl, onClick = { onOpen(s.projectId) })
+                // Dossiers partagés d'abord (par nom), puis les schémas partagés un par un.
+                val groups = r.schemas.groupBy { it.schema.folderName }
+                    .toList()
+                    .sortedWith(compareBy({ it.first == null }, { it.first?.lowercase() }))
+                groups.forEach { (folderName, list) ->
+                    if (groups.size > 1 || folderName != null) {
+                        item(span = { GridItemSpan(maxLineSpan) }, key = "h:" + (folderName ?: "")) {
+                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 8.dp)) {
+                                Icon(
+                                    if (folderName != null) Icons.Outlined.Folder else Icons.Outlined.Group,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(20.dp),
+                                )
+                                Spacer(Modifier.width(8.dp))
+                                Text(
+                                    "${folderName ?: "Autres schémas"} · ${list.size}",
+                                    style = MaterialTheme.typography.titleMedium,
+                                )
+                            }
+                        }
+                    }
+                    items(list, key = { it.projectId }) { s ->
+                        SchemaCard(s.schema.project, s.photoUrl, onClick = { onOpen(s.projectId) })
+                    }
                 }
             }
         }

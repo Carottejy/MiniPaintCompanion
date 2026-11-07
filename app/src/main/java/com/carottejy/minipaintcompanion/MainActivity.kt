@@ -225,7 +225,7 @@ fun App(repo: Repository, incoming: Uri? = null, onIncomingHandled: () -> Unit =
                 data = data,
                 repo = repo,
                 onOpenProject = { nav.navigate("project/$it") },
-                onNewProject = { nav.navigate("edit/new") },
+                onNewProject = { folder -> nav.navigate("edit/new" + (folder?.let { "?folder=" + Uri.encode(it) } ?: "")) },
                 onUpdateFound = { update = it },
                 onOpenFriends = { nav.navigate("friends") },
                 onImportSchema = { importSchema(it) },
@@ -274,10 +274,14 @@ fun App(repo: Repository, incoming: Uri? = null, onIncomingHandled: () -> Unit =
                 onCopied = { newId -> nav.navigate("project/$newId") { popUpTo("home") } },
             )
         }
-        composable("edit/{id}") { entry ->
+        composable(
+            "edit/{id}?folder={folder}",
+            arguments = listOf(navArgument("folder") { type = NavType.StringType; nullable = true; defaultValue = null }),
+        ) { entry ->
             val id = entry.arguments?.getString("id")?.takeIf { it != "new" }
             ProjectEditorScreen(
                 projectId = id,
+                initialFolder = entry.arguments?.getString("folder"),
                 data = data,
                 repo = repo,
                 onDone = { savedId ->
@@ -327,12 +331,13 @@ private fun HomeScreen(
     data: AppData,
     repo: Repository,
     onOpenProject: (String) -> Unit,
-    onNewProject: () -> Unit,
+    onNewProject: (String?) -> Unit,
     onUpdateFound: (UpdateInfo) -> Unit,
     onImportSchema: (Uri) -> Unit,
     onOpenFriends: () -> Unit,
 ) {
     var tab by rememberSaveable { mutableIntStateOf(0) }
+    var openFolder by rememberSaveable { mutableStateOf<String?>(null) }
     var showCustom by remember { mutableStateOf(false) }
     var menuOpen by remember { mutableStateOf(false) }
     var confirmRestore by remember { mutableStateOf(false) }
@@ -527,7 +532,7 @@ private fun HomeScreen(
         floatingActionButton = {
             if (tab == T_PROJECTS) {
                 ExtendedFloatingActionButton(
-                    onClick = onNewProject,
+                    onClick = { onNewProject(data.folder(openFolder)?.id) },
                     icon = { Icon(Icons.Default.Add, contentDescription = null) },
                     text = { Text("Nouveau schéma") },
                 )
@@ -536,7 +541,14 @@ private fun HomeScreen(
     ) { padding ->
         val m = Modifier.fillMaxSize().padding(padding)
         when (tab) {
-            T_PROJECTS -> ProjectsScreen(data, repo, onOpen = { onOpenProject(it.id) }, modifier = m)
+            T_PROJECTS -> ProjectsScreen(
+                data, repo,
+                onOpen = { onOpenProject(it.id) },
+                openFolder = openFolder,
+                onOpenFolder = { openFolder = it },
+                onOpenFriends = onOpenFriends,
+                modifier = m,
+            )
             T_PAINTS -> CollectionScreen(
                 data, repo,
                 onOpenCatalog = onOpenCatalog,

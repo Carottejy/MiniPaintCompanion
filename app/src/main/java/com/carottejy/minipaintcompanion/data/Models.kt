@@ -71,6 +71,16 @@ data class Project(
     val steps: List<Step> = emptyList(),
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis(),
+    /** Dossier de rangement, null = à la racine. */
+    val folderId: String? = null,
+)
+
+/** Dossier de rangement des schémas. */
+@Serializable
+data class Folder(
+    val id: String,
+    val name: String,
+    val createdAt: Long = System.currentTimeMillis(),
 )
 
 @Serializable
@@ -90,7 +100,18 @@ data class AppData(
     val friendCode: String? = null,
     /** Schémas visibles par mes amis. */
     val friendSharedIds: Set<String> = emptySet(),
-)
+    val folders: List<Folder> = emptyList(),
+    /** Dossiers visibles par mes amis (tous leurs schémas le sont). */
+    val friendSharedFolderIds: Set<String> = emptySet(),
+) {
+    fun folder(id: String?): Folder? = id?.let { f -> folders.firstOrNull { it.id == f } }
+
+    /** Le schéma est-il visible par mes amis (lui-même ou via son dossier) ? */
+    fun visibleToFriends(p: Project): Boolean =
+        p.id in friendSharedIds || (p.folderId != null && p.folderId in friendSharedFolderIds && folder(p.folderId) != null)
+
+    val friendVisibleIds: Set<String> get() = projects.filter { visibleToFriends(it) }.map { it.id }.toSet()
+}
 
 /** Contenu d'un fichier de partage de schéma. */
 @Serializable
@@ -98,6 +119,8 @@ data class SharedSchema(
     val format: Int = 1,
     val project: Project,
     val customPaints: List<Paint> = emptyList(),
+    /** Dossier partagé contenant le schéma (affiché chez les amis). */
+    val folderName: String? = null,
 )
 
 /** Groupe auquel appartient chaque étape (id de l'en-tête), null hors groupe. */

@@ -181,15 +181,47 @@ object Friends {
         act(repo, "unpublish", mapOf("projectId" to JsonPrimitive(projectId)))
     }
 
+    /** Publie ou retire un schéma selon sa visibilité actuelle (lui-même ou son dossier). */
+    private suspend fun apply(repo: Repository, project: Project) {
+        val d = repo.data.value
+        val p = d.projects.firstOrNull { it.id == project.id } ?: project
+        if (d.visibleToFriends(p)) publish(repo, p) else unpublish(repo, p.id)
+    }
+
     /** Rend un schéma visible ou non par mes amis (publication immédiate). */
     suspend fun setShared(repo: Repository, project: Project, shared: Boolean) {
-        if (shared) publish(repo, project) else unpublish(repo, project.id)
         repo.setSharedWithFriends(project.id, shared)
+        try {
+            apply(repo, project)
+        } catch (e: Exception) {
+            repo.setSharedWithFriends(project.id, !shared)
+            throw e
+        }
+    }
+
+    /** Rend un dossier (et tous ses schémas) visible ou non par mes amis. */
+    suspend fun setFolderShared(repo: Repository, folderId: String, shared: Boolean) {
+        secretOf(repo)
+        repo.setFolderShared(folderId, shared)
+        try {
+            repo.data.value.projects.filter { it.folderId == folderId }.forEach { apply(repo, it) }
+        } catch (e: Exception) {
+            repo.setFolderShared(folderId, !shared)
+            syncInBackground(repo)
+            throw e
+        }
+    }
+
+    /** Republie en arrière-plan (ex. dossier partagé renommé). */
+    internal fun republish(repo: Repository, projects: List<Project>) {
+        val d = repo.data.value
+        if (d.friendSecret == null) return
+        projects.filter { d.visibleToFriends(it) }.forEach { p -> scope.launch { runCatching { publish(repo, p) } } }
     }
 
     internal fun onSaved(repo: Repository, project: Project) {
         val d = repo.data.value
-        if (d.friendSecret == null || project.id !in d.friendSharedIds) return
+        if (d.friendSecret == null || !d.visibleToFriends(project)) return
         scope.launch { runCatching { publish(repo, project) } }
     }
 
@@ -210,11 +242,12 @@ object Friends {
                     val online = Repository.json.decodeFromJsonElement(PublishedList.serializer(), act(repo, "mine")).schemas
                         .associate { it.projectId to (runCatching { Instant.parse(it.updatedAt).toEpochMilli() }.getOrNull() ?: 0L) }
                     val d = repo.data.value
-                    d.projects.filter { it.id in d.friendSharedIds }.forEach { p ->
+                    d.projects.filter { d.visibleToFriends(it) }.forEach { p ->
                         val at = online[p.id]
                         if (at == null || at < p.updatedAt) runCatching { publish(repo, p) }
                     }
-                    online.keys.filter { it !in d.friendSharedIds }.forEach { runCatching { unpublish(repo, it) } }
+                    val visible = d.friendVisibleIds
+                    online.keys.filter { it !in visible }.forEach { runCatching { unpublish(repo, it) } }
                 }
             }
         }

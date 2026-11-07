@@ -172,11 +172,45 @@ class Repository private constructor(context: Context) {
 
     // ------------------------------------------------------------ amis
 
+    // ------------------------------------------------------------ dossiers
+
+    fun createFolder(name: String): Folder {
+        val f = Folder(id = UUID.randomUUID().toString(), name = name.trim().ifBlank { "Dossier" })
+        mutate { d -> d.copy(folders = (d.folders + f).sortedBy { it.name.lowercase() }) }
+        return f
+    }
+
+    fun renameFolder(id: String, name: String) {
+        mutate { d -> d.copy(folders = d.folders.map { if (it.id == id) it.copy(name = name.trim().ifBlank { it.name }) else it }.sortedBy { it.name.lowercase() }) }
+        if (id in _data.value.friendSharedFolderIds) Friends.republish(this, _data.value.projects.filter { it.folderId == id })
+    }
+
+    /** Supprime le dossier ; ses schémas reviennent à la racine. */
+    fun deleteFolder(id: String) {
+        mutate { d ->
+            d.copy(
+                folders = d.folders.filterNot { it.id == id },
+                friendSharedFolderIds = d.friendSharedFolderIds - id,
+                projects = d.projects.map { if (it.folderId == id) it.copy(folderId = null) else it },
+            )
+        }
+        Friends.syncInBackground(this)
+    }
+
+    fun moveToFolder(projectIds: Collection<String>, folderId: String?) {
+        mutate { d -> d.copy(projects = d.projects.map { if (it.id in projectIds) it.copy(folderId = folderId, updatedAt = System.currentTimeMillis()) else it }) }
+        Friends.syncInBackground(this)
+    }
+
+    fun setFolderShared(folderId: String, shared: Boolean) = mutate { d ->
+        d.copy(friendSharedFolderIds = if (shared) d.friendSharedFolderIds + folderId else d.friendSharedFolderIds - folderId)
+    }
+
     fun setFriendIdentity(secret: String, pseudo: String, code: String) =
         mutate { it.copy(friendSecret = secret, friendPseudo = pseudo, friendCode = code) }
 
     fun clearFriendIdentity() =
-        mutate { it.copy(friendSecret = null, friendPseudo = null, friendCode = null, friendSharedIds = emptySet()) }
+        mutate { it.copy(friendSecret = null, friendPseudo = null, friendCode = null, friendSharedIds = emptySet(), friendSharedFolderIds = emptySet()) }
 
     fun setSharedWithFriends(projectId: String, shared: Boolean) = mutate { d ->
         d.copy(friendSharedIds = if (shared) d.friendSharedIds + projectId else d.friendSharedIds - projectId)
@@ -185,7 +219,12 @@ class Repository private constructor(context: Context) {
     /** Contenu publié pour les amis : le schéma sans photo locale, avec les pots perso utilisés. */
     fun sharedPayload(project: Project, d: AppData = _data.value): SharedSchema {
         val used = project.steps.flatMap { it.allPaintIds }.toSet()
-        return SharedSchema(project = project.copy(photo = null), customPaints = d.customPaints.filter { it.id in used })
+        val folder = d.folder(project.folderId)?.takeIf { it.id in d.friendSharedFolderIds }
+        return SharedSchema(
+            project = project.copy(photo = null, folderId = null),
+            customPaints = d.customPaints.filter { it.id in used },
+            folderName = folder?.name,
+        )
     }
 
     /** Copie le schéma d'un ami dans mes schémas. */
@@ -340,6 +379,7 @@ class Repository private constructor(context: Context) {
         val now = System.currentTimeMillis()
         val imported = s.project.copy(
             id = UUID.randomUUID().toString(),
+            folderId = null,
             photo = photoName,
             createdAt = now,
             updatedAt = now,

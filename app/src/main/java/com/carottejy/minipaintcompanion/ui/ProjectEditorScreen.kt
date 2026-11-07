@@ -121,6 +121,7 @@ private fun newStep() = Step(id = UUID.randomUUID().toString())
 @Composable
 fun ProjectEditorScreen(
     projectId: String?,
+    initialFolder: String? = null,
     data: AppData,
     repo: Repository,
     onDone: (savedId: String?) -> Unit,
@@ -131,7 +132,7 @@ fun ProjectEditorScreen(
     // Le brouillon est sérialisé en JSON pour survivre à la rotation et au retour de l'appareil photo.
     val originalJson = rememberSaveable {
         val existing = data.projects.firstOrNull { it.id == projectId }
-        encode(existing ?: Project(id = UUID.randomUUID().toString(), steps = listOf(newStep().copy(title = "Sous-couche", primer = true))))
+        encode(existing ?: Project(id = UUID.randomUUID().toString(), folderId = initialFolder, steps = listOf(newStep().copy(title = "Sous-couche", primer = true))))
     }
     var draftJson by rememberSaveable { mutableStateOf(originalJson) }
     val draft = remember(draftJson) { decode(draftJson) }

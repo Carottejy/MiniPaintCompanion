@@ -58,6 +58,7 @@ import com.carottejy.minipaintcompanion.data.Repository
 import com.carottejy.minipaintcompanion.data.Friends
 import com.carottejy.minipaintcompanion.data.Project
 import androidx.compose.material.icons.outlined.Group
+import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.LibraryAdd
 import androidx.compose.material3.Switch
 import androidx.compose.runtime.rememberCoroutineScope
@@ -167,7 +168,12 @@ fun ProjectDetailScreen(
                     )
                     if (!isFriend) {
                         Spacer(Modifier.height(8.dp))
+                        FolderRow(project, data, repo)
+                        Spacer(Modifier.height(8.dp))
                         FriendVisibilityRow(project, data, repo, onOpenFriends)
+                    } else friendEntry?.schema?.folderName?.let { fn ->
+                        Spacer(Modifier.height(6.dp))
+                        InfoChip("Dossier · $fn")
                     }
                     if (project.notes.isNotBlank()) {
                         Spacer(Modifier.height(12.dp))
@@ -382,6 +388,7 @@ private fun FriendVisibilityRow(project: Project, data: AppData, repo: Repositor
     val scope = rememberCoroutineScope()
     var busy by remember { mutableStateOf(false) }
     val shared = project.id in data.friendSharedIds
+    val viaFolder = data.folder(project.folderId)?.takeIf { it.id in data.friendSharedFolderIds }
     Row(
         Modifier
             .fillMaxWidth()
@@ -398,6 +405,7 @@ private fun FriendVisibilityRow(project: Project, data: AppData, repo: Repositor
                 when {
                     data.friendSecret == null -> "Crée ton profil d'amis pour partager ce schéma"
                     busy -> "Envoi en cours…"
+                    viaFolder != null -> "Visible via le dossier « ${viaFolder.name} »"
                     shared -> "Tes amis voient ce schéma et ses mises à jour"
                     else -> "Seul toi vois ce schéma"
                 },
@@ -409,8 +417,8 @@ private fun FriendVisibilityRow(project: Project, data: AppData, repo: Repositor
             TextButton(onClick = onOpenFriends) { Text("Mes amis") }
         } else {
             Switch(
-                checked = shared,
-                enabled = !busy,
+                checked = shared || viaFolder != null,
+                enabled = !busy && viaFolder == null,
                 onCheckedChange = { on ->
                     scope.launch {
                         busy = true
@@ -421,5 +429,43 @@ private fun FriendVisibilityRow(project: Project, data: AppData, repo: Repositor
                 },
             )
         }
+    }
+}
+
+/** Ligne « Dossier » : touche pour ranger le schéma ailleurs. */
+@Composable
+private fun FolderRow(project: Project, data: AppData, repo: Repository) {
+    var picking by remember { mutableStateOf(false) }
+    val folder = data.folder(project.folderId)
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(MaterialTheme.colorScheme.surfaceContainer)
+            .clickable { picking = true }
+            .padding(horizontal = 12.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(androidx.compose.material.icons.Icons.Outlined.Folder, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f)) {
+            Text("Dossier", style = MaterialTheme.typography.bodyLarge)
+            Text(
+                folder?.name ?: "Aucun — touche pour ranger ce schéma",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Text("Changer", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+    }
+    if (picking) {
+        MoveToFolderDialog(
+            data = data,
+            repo = repo,
+            current = project.folderId,
+            title = "Ranger dans un dossier",
+            onDismiss = { picking = false },
+            onPick = { fid -> picking = false; repo.moveToFolder(listOf(project.id), fid) },
+        )
     }
 }
