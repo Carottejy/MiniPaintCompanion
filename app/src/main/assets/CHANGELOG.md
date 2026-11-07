@@ -1,4 +1,7 @@
 ## @VERSION@ — @DATE@
+- Glisser-déposer vers les dossiers : maintiens un schéma, puis fais-le glisser sur un dossier pour l'y ranger. Dans un dossier, dépose-le sur la zone du haut pour l'en sortir. Un appui long sans bouger ouvre toujours la liste des dossiers.
+
+## 1.0.28 — 07/11/2026
 - Mise à jour automatique : sur les téléphones qui refusent l'installation silencieuse (Xiaomi notamment, erreur « Permission Denied »), l'appli passe désormais par l'installateur d'Android, qui demande une simple confirmation.
 
 ## 1.0.27 — 07/11/2026

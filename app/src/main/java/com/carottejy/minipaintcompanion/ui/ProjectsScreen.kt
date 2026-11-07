@@ -2,10 +2,8 @@ package com.carottejy.minipaintcompanion.ui
 
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -66,6 +64,37 @@ import com.carottejy.minipaintcompanion.data.Friends
 import com.carottejy.minipaintcompanion.data.Project
 import com.carottejy.minipaintcompanion.data.Repository
 import kotlinx.coroutines.launch
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.zIndex
+
+private const val ROOT_TARGET = "__root__"
+
+/** Glisser-déposer d'un schéma vers un dossier (ou hors du dossier). */
+private class SchemaDrag {
+    var draggingId by mutableStateOf<String?>(null)
+    var pointer by mutableStateOf(Offset.Zero)
+    val targets = mutableStateMapOf<String, Rect>()
+    val hovered: String? get() = if (draggingId == null) null else targets.entries.firstOrNull { it.value.contains(pointer) }?.key
+}
+
+/** Enregistre la zone d'un dossier (ou de la sortie) comme cible de dépôt. */
+@Composable
+private fun Modifier.dropTarget(drag: SchemaDrag, key: String): Modifier {
+    DisposableEffect(key) { onDispose { drag.targets.remove(key) } }
+    return onGloballyPositioned { drag.targets[key] = it.boundsInRoot() }
+}
 
 /**
  * Mes schémas : dossiers puis schémas hors dossier ; dans un dossier, ses schémas.
@@ -83,7 +112,14 @@ fun ProjectsScreen(
 ) {
     var newFolder by remember { mutableStateOf(false) }
     var moving by remember { mutableStateOf<Project?>(null) }
+    val drag = remember { SchemaDrag() }
+    val haptic = LocalHapticFeedback.current
     val folder = data.folder(openFolder)
+    // Vibration légère quand on survole une nouvelle cible.
+    val hovered = drag.hovered
+    androidx.compose.runtime.LaunchedEffect(hovered) {
+        if (hovered != null) haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+    }
     BackHandler(enabled = folder != null) { onOpenFolder(null) }
 
     if (data.projects.isEmpty() && data.folders.isEmpty()) {
@@ -106,7 +142,7 @@ fun ProjectsScreen(
     ) {
         if (folder != null) {
             item(span = { GridItemSpan(maxLineSpan) }) {
-                FolderHeader(folder, shown.size, data, repo, onBack = { onOpenFolder(null) }, onOpenFriends = onOpenFriends)
+                FolderHeader(folder, shown.size, data, repo, drag, onBack = { onOpenFolder(null) }, onOpenFriends = onOpenFriends)
             }
         } else {
             item(span = { GridItemSpan(maxLineSpan) }) {
@@ -118,7 +154,14 @@ fun ProjectsScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.weight(1f),
                     )
-                    TextButton(onClick = { newFolder = true }) {
+                    if (drag.draggingId != null && data.folders.isNotEmpty()) {
+                        Text(
+                            "Dépose le schéma sur un dossier",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(vertical = 12.dp),
+                        )
+                    } else TextButton(onClick = { newFolder = true }) {
                         Icon(Icons.Outlined.CreateNewFolder, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(6.dp))
                         Text("Dossier")
@@ -132,6 +175,8 @@ fun ProjectsScreen(
                     shared = f.id in data.friendSharedFolderIds && data.friendSecret != null,
                     cover = data.projects.firstOrNull { it.folderId == f.id && it.photo != null }?.let { repo.photoFile(it.photo) },
                     onClick = { onOpenFolder(f.id) },
+                    highlighted = hovered == f.id,
+                    modifier = Modifier.dropTarget(drag, f.id),
                 )
             }
         }
@@ -146,7 +191,20 @@ fun ProjectsScreen(
             }
         }
         items(shown, key = { it.id }) { p ->
-            ProjectCard(p, repo, shared = data.friendSecret != null && data.visibleToFriends(p), onClick = { onOpen(p) }, onLongClick = { moving = p })
+            ProjectCard(
+                p, repo,
+                shared = data.friendSecret != null && data.visibleToFriends(p),
+                drag = drag,
+                onClick = { onOpen(p) },
+                onLongClick = { moving = p },
+                onDrop = { target ->
+                    val dest = if (target == ROOT_TARGET) null else target
+                    if (dest != p.folderId) {
+                        repo.moveToFolder(listOf(p.id), dest)
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    }
+                },
+            )
         }
     }
 
@@ -176,6 +234,7 @@ private fun FolderHeader(
     count: Int,
     data: AppData,
     repo: Repository,
+    drag: SchemaDrag,
     onBack: () -> Unit,
     onOpenFriends: () -> Unit,
 ) {
@@ -187,7 +246,27 @@ private fun FolderHeader(
     var busy by remember { mutableStateOf(false) }
     val shared = folder.id in data.friendSharedFolderIds
     Column {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        if (drag.draggingId != null) {
+            // Zone de sortie du dossier pendant un glisser-déposer (même hauteur que la ligne de titre).
+            val over = drag.hovered == ROOT_TARGET
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 52.dp)
+                    .dropTarget(drag, ROOT_TARGET)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(
+                        if (over) MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)
+                        else MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
+                    )
+                    .padding(horizontal = 16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(Icons.Outlined.FolderOff, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                Spacer(Modifier.width(12.dp))
+                Text("Dépose ici pour sortir le schéma du dossier", style = MaterialTheme.typography.bodyLarge)
+            }
+        } else Row(Modifier.heightIn(min = 52.dp), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Tous mes schémas") }
             Icon(Icons.Outlined.Folder, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
             Spacer(Modifier.width(8.dp))
@@ -281,11 +360,23 @@ private fun FolderHeader(
 }
 
 @Composable
-private fun FolderCard(folder: Folder, count: Int, shared: Boolean, cover: java.io.File?, onClick: () -> Unit) {
+private fun FolderCard(
+    folder: Folder,
+    count: Int,
+    shared: Boolean,
+    cover: java.io.File?,
+    onClick: () -> Unit,
+    highlighted: Boolean = false,
+    modifier: Modifier = Modifier,
+) {
     Card(
         onClick = onClick,
         shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = if (highlighted) 0.8f else 0.35f),
+        ),
+        border = if (highlighted) BorderStroke(3.dp, MaterialTheme.colorScheme.primary) else null,
+        modifier = modifier.graphicsLayer { if (highlighted) { scaleX = 1.05f; scaleY = 1.05f } },
     ) {
         Box(Modifier.fillMaxWidth().aspectRatio(1.25f).clip(RoundedCornerShape(18.dp))) {
             if (cover != null) ProjectPhoto(cover, Modifier.fillMaxSize())
@@ -310,13 +401,63 @@ private fun FolderCard(folder: Folder, count: Int, shared: Boolean, cover: java.
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun ProjectCard(project: Project, repo: Repository, shared: Boolean, onClick: () -> Unit, onLongClick: () -> Unit) {
+private fun ProjectCard(
+    project: Project,
+    repo: Repository,
+    shared: Boolean,
+    drag: SchemaDrag,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit,
+    onDrop: (String) -> Unit,
+) {
+    val haptic = LocalHapticFeedback.current
+    var origin by remember { mutableStateOf(Offset.Zero) }
+    var offset by remember { mutableStateOf(Offset.Zero) }
+    val dragging = drag.draggingId == project.id
+    fun finish() {
+        drag.draggingId = null
+        offset = Offset.Zero
+    }
     Card(
         shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
-        modifier = Modifier.clip(RoundedCornerShape(18.dp)).combinedClickable(onClick = onClick, onLongClick = onLongClick),
+        elevation = CardDefaults.cardElevation(defaultElevation = if (dragging) 12.dp else 0.dp),
+        modifier = Modifier
+            .onGloballyPositioned { if (!dragging) origin = it.positionInRoot() }
+            .zIndex(if (dragging) 10f else 0f)
+            .graphicsLayer {
+                translationX = offset.x
+                translationY = offset.y
+                if (dragging) { scaleX = 0.85f; scaleY = 0.85f; alpha = 0.92f }
+            }
+            .pointerInput(project.id) {
+                detectDragGesturesAfterLongPress(
+                    onDragStart = { start ->
+                        offset = Offset.Zero
+                        drag.pointer = origin + start
+                        drag.draggingId = project.id
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    },
+                    onDrag = { change, amount ->
+                        change.consume()
+                        offset += amount
+                        drag.pointer += amount
+                    },
+                    onDragEnd = {
+                        val target = drag.hovered
+                        val distance = offset.getDistance()
+                        finish()
+                        when {
+                            target != null -> onDrop(target)
+                            distance < 24f -> onLongClick() // appui long sans bouger : liste des dossiers
+                        }
+                    },
+                    onDragCancel = { finish() },
+                )
+            }
+            .clip(RoundedCornerShape(18.dp))
+            .clickable(onClick = onClick),
     ) {
         Box {
             ProjectPhoto(
