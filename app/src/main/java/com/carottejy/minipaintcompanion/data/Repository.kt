@@ -160,12 +160,38 @@ class Repository private constructor(context: Context) {
             val others = d.projects.filterNot { it.id == project.id }
             d.copy(projects = (others + saved).sortedByDescending { it.createdAt })
         }
+        Friends.onSaved(this, saved)
     }
 
     fun deleteProject(id: String) {
         val p = _data.value.projects.firstOrNull { it.id == id } ?: return
         p.photo?.let { File(photosDir, it).delete() }
-        mutate { d -> d.copy(projects = d.projects.filterNot { it.id == id }) }
+        mutate { d -> d.copy(projects = d.projects.filterNot { it.id == id }, friendSharedIds = d.friendSharedIds - id) }
+        Friends.onDeleted(this, id)
+    }
+
+    // ------------------------------------------------------------ amis
+
+    fun setFriendIdentity(secret: String, pseudo: String, code: String) =
+        mutate { it.copy(friendSecret = secret, friendPseudo = pseudo, friendCode = code) }
+
+    fun clearFriendIdentity() =
+        mutate { it.copy(friendSecret = null, friendPseudo = null, friendCode = null, friendSharedIds = emptySet()) }
+
+    fun setSharedWithFriends(projectId: String, shared: Boolean) = mutate { d ->
+        d.copy(friendSharedIds = if (shared) d.friendSharedIds + projectId else d.friendSharedIds - projectId)
+    }
+
+    /** Contenu publié pour les amis : le schéma sans photo locale, avec les pots perso utilisés. */
+    fun sharedPayload(project: Project, d: AppData = _data.value): SharedSchema {
+        val used = project.steps.flatMap { it.allPaintIds }.toSet()
+        return SharedSchema(project = project.copy(photo = null), customPaints = d.customPaints.filter { it.id in used })
+    }
+
+    /** Copie le schéma d'un ami dans mes schémas. */
+    suspend fun importFriendSchema(s: SharedSchema, photo: ByteArray?): Project = withContext(Dispatchers.IO) {
+        val photoName = photo?.let { bytes -> newPhotoFile().also { it.writeBytes(bytes) }.name }
+        addImported(s, photoName)
     }
 
     // ------------------------------------------------------------ photos
@@ -307,6 +333,10 @@ class Repository private constructor(context: Context) {
                 else "Ce fichier n'est pas un schéma MiniPaintCompanion."
             )
         }
+        addImported(s, photoName)
+    }
+
+    private fun addImported(s: SharedSchema, photoName: String?): Project {
         val now = System.currentTimeMillis()
         val imported = s.project.copy(
             id = UUID.randomUUID().toString(),
@@ -322,7 +352,7 @@ class Repository private constructor(context: Context) {
                 customPaints = d.customPaints + s.customPaints.filter { it.id !in known },
             )
         }
-        imported
+        return imported
     }
 
     private fun cleanOrphanPhotos() {

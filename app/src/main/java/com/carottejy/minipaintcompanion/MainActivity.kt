@@ -65,6 +65,12 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.carottejy.minipaintcompanion.data.AppData
 import com.carottejy.minipaintcompanion.data.Repository
+import com.carottejy.minipaintcompanion.data.Friends
+import com.carottejy.minipaintcompanion.ui.FriendsScreen
+import com.carottejy.minipaintcompanion.ui.FriendSchemasScreen
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
+import androidx.compose.material.icons.outlined.Group
 import com.carottejy.minipaintcompanion.ui.CatalogScreen
 import com.carottejy.minipaintcompanion.ui.CollectionScreen
 import com.carottejy.minipaintcompanion.ui.CustomPaintDialog
@@ -153,6 +159,8 @@ fun App(repo: Repository, incoming: Uri? = null, onIncomingHandled: () -> Unit =
                 .onFailure { Toast.makeText(context, it.message ?: "Import impossible", Toast.LENGTH_LONG).show() }
         }
     }
+    // Amis : republie les schémas partagés modifiés hors connexion.
+    LaunchedEffect(Unit) { Friends.syncInBackground(repo) }
     LaunchedEffect(incoming) {
         if (incoming != null) {
             importSchema(incoming)
@@ -219,6 +227,7 @@ fun App(repo: Repository, incoming: Uri? = null, onIncomingHandled: () -> Unit =
                 onOpenProject = { nav.navigate("project/$it") },
                 onNewProject = { nav.navigate("edit/new") },
                 onUpdateFound = { update = it },
+                onOpenFriends = { nav.navigate("friends") },
                 onImportSchema = { importSchema(it) },
             )
         }
@@ -230,6 +239,39 @@ fun App(repo: Repository, incoming: Uri? = null, onIncomingHandled: () -> Unit =
                 repo = repo,
                 onBack = { nav.back() },
                 onEdit = { nav.navigate("edit/$id") },
+                onOpenFriends = { nav.navigate("friends") },
+            )
+        }
+        composable("friends") {
+            FriendsScreen(
+                data = data,
+                repo = repo,
+                onBack = { nav.back() },
+                onOpenFriend = { f -> nav.navigate("friend/${Uri.encode(f.code)}?pseudo=${Uri.encode(f.pseudo)}") },
+            )
+        }
+        composable(
+            "friend/{code}?pseudo={pseudo}",
+            arguments = listOf(navArgument("pseudo") { type = NavType.StringType; defaultValue = "" }),
+        ) { entry ->
+            val code = entry.arguments?.getString("code").orEmpty()
+            FriendSchemasScreen(
+                code = code,
+                pseudo = entry.arguments?.getString("pseudo").orEmpty(),
+                repo = repo,
+                onBack = { nav.back() },
+                onOpen = { pid -> nav.navigate("friendschema/${Uri.encode(code)}/${Uri.encode(pid)}") },
+            )
+        }
+        composable("friendschema/{code}/{id}") { entry ->
+            ProjectDetailScreen(
+                projectId = entry.arguments?.getString("id").orEmpty(),
+                data = data,
+                repo = repo,
+                onBack = { nav.back() },
+                onEdit = {},
+                friendCode = entry.arguments?.getString("code").orEmpty(),
+                onCopied = { newId -> nav.navigate("project/$newId") { popUpTo("home") } },
             )
         }
         composable("edit/{id}") { entry ->
@@ -288,6 +330,7 @@ private fun HomeScreen(
     onNewProject: () -> Unit,
     onUpdateFound: (UpdateInfo) -> Unit,
     onImportSchema: (Uri) -> Unit,
+    onOpenFriends: () -> Unit,
 ) {
     var tab by rememberSaveable { mutableIntStateOf(0) }
     var showCustom by remember { mutableStateOf(false) }
@@ -379,6 +422,11 @@ private fun HomeScreen(
                     }
                 },
                 actions = {
+                    if (tab == T_PROJECTS) {
+                        IconButton(onClick = onOpenFriends) {
+                            Icon(Icons.Outlined.Group, contentDescription = "Mes amis et leurs schémas")
+                        }
+                    }
                     if (tab == T_PAINTS || tab == T_CATALOG || tab == T_SHOPPING) {
                         IconButton(onClick = { startScan() }) {
                             Icon(Icons.Outlined.DocumentScanner, contentDescription = "Identifier un pot (étiquette ou QR code)")

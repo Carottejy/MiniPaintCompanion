@@ -144,7 +144,7 @@ fun PaintLine(
 }
 
 @Composable
-fun ProjectPhoto(file: File?, modifier: Modifier = Modifier, contentScale: ContentScale = ContentScale.Crop) {
+fun ProjectPhoto(file: Any?, modifier: Modifier = Modifier, contentScale: ContentScale = ContentScale.Crop) {
     if (file != null) {
         AsyncImage(
             model = file,

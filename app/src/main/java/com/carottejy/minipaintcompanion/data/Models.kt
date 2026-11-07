@@ -84,6 +84,12 @@ data class AppData(
     val barcodes: Map<String, String> = emptyMap(),
     /** Ma liste de sous-couches ; null = liste par défaut. */
     val primerIds: Set<String>? = null,
+    /** Amis : secret de l'appareil (jamais affiché), pseudo et code ami public. */
+    val friendSecret: String? = null,
+    val friendPseudo: String? = null,
+    val friendCode: String? = null,
+    /** Schémas visibles par mes amis. */
+    val friendSharedIds: Set<String> = emptySet(),
 )
 
 /** Contenu d'un fichier de partage de schéma. */

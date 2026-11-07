@@ -1,4 +1,10 @@
 ## @VERSION@ — @DATE@
+- Amis : bouton 👥 en haut de « Mes schémas ». Choisis un pseudo (sans compte), donne ton code ami (ex. MPC-7K4QXZ) ou saisis celui d'un ami, puis accepte les invitations reçues.
+- Sur la fiche d'un schéma, l'interrupteur « Visible par mes amis » le partage avec tes amis ; ses modifications suivent automatiquement (même après une coupure réseau).
+- Consulte les schémas de tes amis : photo, étapes, mélanges, pots que tu possèdes ou non, ajout des pots manquants à ta liste d'achat, et « Copier dans mes schémas ».
+- Ton identité d'amis est incluse dans la sauvegarde ; « Supprimer mon profil » efface tout du serveur.
+
+## 1.0.25 — 06/11/2026
 - Glisser-déposer dans l'éditeur de schéma : maintiens la poignée ⋮⋮ d'une étape ou d'un groupe et déplace-la. Un groupe se replie pendant le déplacement et emporte toutes ses étapes ; une étape lâchée dans un groupe en fait partie.
 
 ## 1.0.24 — 06/11/2026

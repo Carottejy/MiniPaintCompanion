@@ -55,6 +55,15 @@ import com.carottejy.minipaintcompanion.data.groupSizes
 import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import com.carottejy.minipaintcompanion.data.Repository
+import com.carottejy.minipaintcompanion.data.Friends
+import com.carottejy.minipaintcompanion.data.Project
+import androidx.compose.material.icons.outlined.Group
+import androidx.compose.material.icons.outlined.LibraryAdd
+import androidx.compose.material3.Switch
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.platform.LocalContext
+import android.widget.Toast
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class, androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
@@ -64,8 +73,18 @@ fun ProjectDetailScreen(
     repo: Repository,
     onBack: () -> Unit,
     onEdit: () -> Unit,
+    /** Schéma d'un ami (lecture seule) : son code ami. */
+    friendCode: String? = null,
+    onOpenFriends: () -> Unit = {},
+    onCopied: (String) -> Unit = {},
 ) {
-    val project = data.projects.firstOrNull { it.id == projectId }
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val friendData = friendCode?.let { Friends.cache[it] }
+    val friendEntry = friendData?.schemas?.firstOrNull { it.projectId == projectId }
+    val isFriend = friendCode != null
+    val project = if (isFriend) friendEntry?.schema?.project else data.projects.firstOrNull { it.id == projectId }
+    var copying by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
     var fullPhoto by remember { mutableStateOf(false) }
     var sharing by remember { mutableStateOf(false) }
@@ -79,7 +98,31 @@ fun ProjectDetailScreen(
                     IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Retour") }
                 },
                 actions = {
-                    if (project != null) {
+                    if (project != null && isFriend && friendEntry != null) {
+                        TextButton(
+                            enabled = !copying,
+                            onClick = {
+                                scope.launch {
+                                    copying = true
+                                    runCatching {
+                                        val bytes = friendEntry.photoUrl?.let { runCatching { Friends.download(it) }.getOrNull() }
+                                        repo.importFriendSchema(friendEntry.schema, bytes)
+                                    }.onSuccess { p ->
+                                        Toast.makeText(context, "Copié dans tes schémas", Toast.LENGTH_SHORT).show()
+                                        onCopied(p.id)
+                                    }.onFailure {
+                                        Toast.makeText(context, it.message ?: "Copie impossible", Toast.LENGTH_LONG).show()
+                                    }
+                                    copying = false
+                                }
+                            },
+                        ) {
+                            Icon(Icons.Outlined.LibraryAdd, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text(if (copying) "Copie…" else "Copier dans mes schémas")
+                        }
+                    }
+                    if (project != null && !isFriend) {
                         IconButton(onClick = { sharing = true }) { Icon(Icons.Outlined.Share, contentDescription = "Partager") }
                         IconButton(onClick = onEdit) { Icon(Icons.Outlined.Edit, contentDescription = "Modifier") }
                         IconButton(onClick = { confirmDelete = true }) { Icon(Icons.Outlined.Delete, contentDescription = "Supprimer") }
@@ -91,12 +134,14 @@ fun ProjectDetailScreen(
     ) { padding ->
         if (project == null) {
             Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                Text("Ce schéma n'existe plus.")
+                Text(if (isFriend) "Ce schéma n'est plus disponible : reviens à la liste de ton ami." else "Ce schéma n'existe plus.")
             }
             return@Scaffold
         }
-        val paintsById = remember(data) { repo.allPaints(data).associateBy { it.id } }
-        val photo = repo.photoFile(project.photo)
+        val paintsById = remember(data, friendEntry) {
+            (repo.allPaints(data) + friendEntry?.schema?.customPaints.orEmpty()).associateBy { it.id }
+        }
+        val photo: Any? = if (isFriend) friendEntry?.photoUrl else repo.photoFile(project.photo)
 
         LazyColumn(
             Modifier.fillMaxSize().padding(padding),
@@ -115,10 +160,15 @@ fun ProjectDetailScreen(
                 Column(Modifier.padding(horizontal = 20.dp, vertical = 16.dp)) {
                     Text(project.name.ifBlank { "Sans titre" }, style = MaterialTheme.typography.headlineMedium)
                     Text(
-                        "Commencée le ${formatDate(project.createdAt)}",
+                        if (isFriend) "Schéma de ${friendData?.pseudo.orEmpty()} · mis à jour le ${formatDate(project.updatedAt)}"
+                        else "Commencée le ${formatDate(project.createdAt)}",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+                    if (!isFriend) {
+                        Spacer(Modifier.height(8.dp))
+                        FriendVisibilityRow(project, data, repo, onOpenFriends)
+                    }
                     if (project.notes.isNotBlank()) {
                         Spacer(Modifier.height(12.dp))
                         Text(project.notes, style = MaterialTheme.typography.bodyLarge)
@@ -322,5 +372,54 @@ fun ProjectDetailScreen(
             },
             dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Annuler") } },
         )
+    }
+}
+
+/** Interrupteur « Visible par mes amis » sur la fiche d'un de mes schémas. */
+@Composable
+private fun FriendVisibilityRow(project: Project, data: AppData, repo: Repository, onOpenFriends: () -> Unit) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var busy by remember { mutableStateOf(false) }
+    val shared = project.id in data.friendSharedIds
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(MaterialTheme.colorScheme.surfaceContainer)
+            .padding(start = 12.dp, end = 8.dp, top = 4.dp, bottom = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(Icons.Outlined.Group, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f)) {
+            Text("Visible par mes amis", style = MaterialTheme.typography.bodyLarge)
+            Text(
+                when {
+                    data.friendSecret == null -> "Crée ton profil d'amis pour partager ce schéma"
+                    busy -> "Envoi en cours…"
+                    shared -> "Tes amis voient ce schéma et ses mises à jour"
+                    else -> "Seul toi vois ce schéma"
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        if (data.friendSecret == null) {
+            TextButton(onClick = onOpenFriends) { Text("Mes amis") }
+        } else {
+            Switch(
+                checked = shared,
+                enabled = !busy,
+                onCheckedChange = { on ->
+                    scope.launch {
+                        busy = true
+                        runCatching { Friends.setShared(repo, project, on) }
+                            .onFailure { Toast.makeText(context, it.message ?: "Erreur", Toast.LENGTH_LONG).show() }
+                        busy = false
+                    }
+                },
+            )
+        }
     }
 }
