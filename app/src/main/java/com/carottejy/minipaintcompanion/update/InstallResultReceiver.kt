@@ -25,9 +25,19 @@ class InstallResultReceiver : BroadcastReceiver() {
                 }
             }
             PackageInstaller.STATUS_SUCCESS -> Unit // l'appli est remplacée par la nouvelle version
+            PackageInstaller.STATUS_FAILURE_ABORTED -> Unit // annulée par l'utilisateur
             else -> {
-                val msg = intent.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE) ?: "erreur inconnue"
-                Toast.makeText(context, "Mise à jour impossible : $msg", Toast.LENGTH_LONG).show()
+                // Installation silencieuse refusée par le téléphone (ex. Xiaomi) : on bascule
+                // définitivement sur l'installateur système, qui demande une simple confirmation.
+                Updater.setSilentBlocked(context)
+                val apk = Updater.pendingApk(context)?.first
+                val fallback = apk != null && runCatching { Updater.install(context, apk) }.isSuccess
+                if (fallback) {
+                    Toast.makeText(context, "Ton téléphone demande de confirmer l'installation de la mise à jour.", Toast.LENGTH_LONG).show()
+                } else {
+                    val msg = intent.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE) ?: "erreur inconnue"
+                    Toast.makeText(context, "Mise à jour impossible : $msg", Toast.LENGTH_LONG).show()
+                }
             }
         }
     }

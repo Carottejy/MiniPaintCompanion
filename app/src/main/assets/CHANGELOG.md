@@ -1,4 +1,7 @@
 ## @VERSION@ — @DATE@
+- Mise à jour automatique : sur les téléphones qui refusent l'installation silencieuse (Xiaomi notamment, erreur « Permission Denied »), l'appli passe désormais par l'installateur d'Android, qui demande une simple confirmation.
+
+## 1.0.27 — 07/11/2026
 - Dossiers : range tes schémas (bouton « Dossier » dans « Mes schémas », appui long sur un schéma ou ligne « Dossier » de sa fiche). Un nouveau schéma créé dans un dossier y est rangé ; supprimer un dossier ne supprime pas ses schémas.
 - Chaque dossier peut être rendu visible par tes amis : tous les schémas qui y sont rangés le deviennent, et tes amis les voient regroupés sous le nom du dossier.
 

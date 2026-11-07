@@ -40,6 +40,7 @@ object Updater {
     private const val KEY_LAST_CHECK = "last_check"
     private const val KEY_IGNORED = "ignored"
     private const val KEY_AUTO = "auto_install"
+    private const val KEY_SILENT_BLOCKED = "silent_blocked"
     private const val AUTO_INTERVAL_MS = 60 * 60 * 1000L
 
     val enabled: Boolean get() = BuildConfig.SELF_UPDATE
@@ -145,6 +146,32 @@ object Updater {
                 flags,
             )
             session.commit(pending.intentSender)
+        }
+    }
+
+    /**
+     * Certains téléphones (MIUI/HyperOS de Xiaomi notamment) refusent l'installation silencieuse
+     * (« INSTALL_FAILED_INTERNAL_ERROR: Permission Denied »). On le mémorise pour passer
+     * ensuite par l'installateur système, avec confirmation.
+     */
+    fun isSilentBlocked(context: Context): Boolean =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(KEY_SILENT_BLOCKED, false)
+
+    fun setSilentBlocked(context: Context) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean(KEY_SILENT_BLOCKED, true).apply()
+    }
+
+    /** Installation silencieuse si le téléphone l'accepte, sinon installateur système. */
+    fun installBest(context: Context, apk: File) {
+        if (isSilentBlocked(context)) {
+            install(context, apk)
+            return
+        }
+        try {
+            installSilently(context, apk)
+        } catch (e: Exception) {
+            setSilentBlocked(context)
+            install(context, apk)
         }
     }
 

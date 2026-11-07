@@ -49,7 +49,7 @@ fun UpdateDialog(info: UpdateInfo, onDismiss: () -> Unit) {
         scope.launch {
             try {
                 val apk = Updater.download(context, info) { phase = Phase.Downloading(it) }
-                Updater.installSilently(context, apk)
+                Updater.installBest(context, apk)
                 onDismiss()
             } catch (e: Exception) {
                 phase = Phase.Failed(e.message ?: "erreur inconnue")

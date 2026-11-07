@@ -23,6 +23,7 @@ import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.Restore
 import androidx.compose.material.icons.outlined.SaveAlt
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.TextButton
@@ -170,6 +171,7 @@ fun App(repo: Repository, incoming: Uri? = null, onIncomingHandled: () -> Unit =
     var update by remember { mutableStateOf<UpdateInfo?>(null) }
 
     var installing by remember { mutableStateOf<String?>(null) }
+    var readyApk by remember { mutableStateOf<Pair<java.io.File, Long>?>(null) }
 
     // Mise à jour automatique (APK GitHub) :
     //  1. une version déjà téléchargée est installée dès le lancement, avant toute saisie ;
@@ -179,13 +181,25 @@ fun App(repo: Repository, incoming: Uri? = null, onIncomingHandled: () -> Unit =
         if (!Updater.enabled) return@LaunchedEffect
         val auto = Updater.isAutoEnabled(context)
         val pending = Updater.pendingApk(context)
+        if (auto && pending != null && Updater.canInstall(context) && Updater.isSilentBlocked(context)) {
+            // Téléphone qui refuse l'installation silencieuse : on propose l'installateur système.
+            readyApk = pending
+            return@LaunchedEffect
+        }
         if (auto && pending != null && Updater.canInstall(context)) {
             installing = "1.0.${pending.second}"
             delay(1500)
             runCatching { withContext(Dispatchers.IO) { Updater.installSilently(context, pending.first) } }
+                .onSuccess {
+                    // Si le téléphone refuse (réponse asynchrone), l'installateur système prend le relais :
+                    // on retire le message d'attente pour ne pas bloquer l'appli.
+                    delay(8000)
+                    installing = null
+                }
                 .onFailure {
                     installing = null
-                    Toast.makeText(context, "Mise à jour impossible : ${it.message}", Toast.LENGTH_LONG).show()
+                    Updater.setSilentBlocked(context)
+                    readyApk = pending
                 }
             return@LaunchedEffect
         }
@@ -206,6 +220,21 @@ fun App(repo: Repository, incoming: Uri? = null, onIncomingHandled: () -> Unit =
         }
     }
     update?.let { UpdateDialog(it, onDismiss = { update = null }) }
+    readyApk?.let { (apk, build) ->
+        AlertDialog(
+            onDismissRequest = { readyApk = null },
+            title = { Text("Mise à jour 1.0.$build prête") },
+            text = { Text("Elle est téléchargée. Ton téléphone demande de confirmer l'installation.") },
+            confirmButton = {
+                Button(onClick = {
+                    readyApk = null
+                    runCatching { Updater.install(context, apk) }
+                        .onFailure { Toast.makeText(context, "Installation impossible : ${it.message}", Toast.LENGTH_LONG).show() }
+                }) { Text("Installer") }
+            },
+            dismissButton = { TextButton(onClick = { readyApk = null }) { Text("Plus tard") } },
+        )
+    }
     installing?.let { v ->
         AlertDialog(
             onDismissRequest = {},
