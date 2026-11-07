@@ -1,4 +1,8 @@
 ## @VERSION@ — @DATE@
+- Catalogue Citadel complété avec les gammes actuelles : 76 pots ajoutés (dont Dark Reaper, Blue Horror, Baneblade Brown, Eshin Grey, XV-88, Corvus Black, Kroak Green, Tyran Blue, Frostheart…). Base, Layer, Shade et Contrast sont désormais complètes.
+- Chaque pot Citadel affiche sa référence officielle (ex. CIT22-52), utilisable dans la recherche.
+
+## 1.0.29 — 07/11/2026
 - Glisser-déposer vers les dossiers : maintiens un schéma, puis fais-le glisser sur un dossier pour l'y ranger. Dans un dossier, dépose-le sur la zone du haut pour l'en sortir. Un appui long sans bouger ouvre toujours la liste des dossiers.
 
 ## 1.0.28 — 07/11/2026

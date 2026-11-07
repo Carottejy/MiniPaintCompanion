@@ -136,163 +136,239 @@ object Catalog {
     // ---------------------------------------------------------------- Citadel
     private val CITADEL = listOf(
         "Base" to """
-            |Abaddon Black|#231F20
-            |Averland Sunset|#FDB825
-            |Balthasar Gold|#A47552
-            |Bugman's Glow|#834F44
-            |Caledor Sky|#366699
-            |Caliban Green|#00401F
-            |Castellan Green|#314821
-            |Celestra Grey|#90A8A8
-            |Corax White|#F2F2F2
-            |Daemonette Hide|#696684
-            |Death Guard Green|#848A66
-            |Doombull Brown|#5D0009
-            |Dryad Bark|#33312D
-            |Gal Vorbak Red|#4B213C
-            |Grey Seer|#A2A5A7
+            CIT21-25|Abaddon Black|#231F20
+            CIT21-01|Averland Sunset|#FDB825
+            CIT21-29|Balthasar Gold|#A47552
+            CIT21-49|Barak-Nar Burgundy|#5A1E2E
+            CIT21-18|Bugman's Glow|#834F44
+            CIT21-09|Caledor Sky|#366699
+            CIT21-12|Caliban Green|#00401F
+            CIT21-14|Castellan Green|#314821
+            CIT21-50|Catachan Flesh|#5A3A2C
+            CIT21-26|Celestra Grey|#90A8A8
+            CIT21-52|Corax White|#F2F2F2
+            CIT21-44|Corvus Black|#1E1C21
+            CIT21-06|Daemonette Hide|#696684
+            CIT21-37|Death Guard Green|#848A66
+            CIT21-40|Death Korps Drab|#3E4231
+            CIT21-15|Death World Forest|#5D6732
+            CIT22-45|Doombull Brown|#5D0009
+            CIT21-23|Dryad Bark|#33312D
+            CIT21-41|Gal Vorbak Red|#4B213C
+            CIT21-47|Grey Knights Steel|#9AA0A4
+            CIT21-54|Grey Seer|#A2A5A7
+            CIT21-57|Hobgrot Hide|#9A7A4A
             |Incubi Darkness|#0B474A
-            |Iron Hands Steel|#8E9294
-            |Jokaero Orange|#EE3823
-            |Kantor Blue|#02134E
-            |Khorne Red|#6A0001
-            |Leadbelcher|#888D8F
-            |Lupercal Green|#002C2B
-            |Macragge Blue|#0D407F
-            |Mechanicus Standard Grey|#3D4B4D
-            |Mephiston Red|#9A1115
-            |Morghast Bone|#C6BB98
-            |Mournfang Brown|#5F2B17
-            |Naggaroth Night|#3D3354
-            |Night Lords Blue|#002A50
-            |Rakarth Flesh|#A29E91
-            |Retributor Armour|#B0874A
-            |Rhinox Hide|#462F30
-            |Screamer Pink|#7C1645
-            |Steel Legion Drab|#5E5134
-            |Stegadon Scale Green|#074863
-            |Thousand Sons Blue|#00506F
-            |Warplock Bronze|#4E3B30
-            |Wraithbone|#DBD1B2
-            |Zandri Dust|#988E56
+            CIT21-38|Ionrach Skin|#C9B8A0
+            CIT21-46|Iron Hands Steel|#8E9294
+            CIT21-48|Iron Warriors|#5A5E60
+            CIT21-02|Jokaero Orange|#EE3823
+            CIT21-07|Kantor Blue|#02134E
+            CIT21-04|Khorne Red|#6A0001
+            CIT21-28|Leadbelcher|#888D8F
+            CIT21-45|Lupercal Green|#002C2B
+            CIT21-08|Macragge Blue|#0D407F
+            CIT21-24|Mechanicus Standard Grey|#3D4B4D
+            CIT21-03|Mephiston Red|#9A1115
+            CIT21-51|Morghast Bone|#C6BB98
+            CIT21-20|Mournfang Brown|#5F2B17
+            CIT21-05|Naggaroth Night|#3D3354
+            CIT21-42|Night Lords Blue|#002A50
+            CIT21-43|Nocturne Green|#1E3A2A
+            CIT21-56|Orruk Flesh|#6E8A4A
+            CIT21-39|Phoenician Purple|#4A1E4A
+            CIT21-27|Rakarth Flesh|#A29E91
+            CIT21-19|Ratskin Flesh|#AE6B4E
+            CIT21-35|Retributor Armour|#B0874A
+            CIT21-22|Rhinox Hide|#462F30
+            CIT21-55|Runelord Brass|#BCAFA0
+            CIT21-33|Screamer Pink|#7C1645
+            CIT21-30|Screaming Bell|#B3562B
+            CIT21-17|Steel Legion Drab|#5E5134
+            CIT21-10|Stegadon Scale Green|#074863
+            CIT21-32|The Fang|#436276
+            CIT21-58|Thondia Brown|#4A3524
+            CIT21-36|Thousand Sons Blue|#00506F
+            CIT21-13|Waaagh! Flesh|#20552B
+            CIT21-31|Warplock Bronze|#4E3B30
+            CIT21-53|Wraithbone|#DBD1B2
+            CIT21-21|XV-88|#72481E
+            CIT21-16|Zandri Dust|#988E56
         """,
         "Layer" to """
-            |Administratum Grey|#949B95
-            |Ahriman Blue|#1F8C9C
-            |Alaitoc Blue|#295788
-            |Altdorf Guard Blue|#1F56A7
-            |Auric Armour Gold|#D4AF37
-            |Baharroth Blue|#58C1CD
-            |Balor Brown|#8B5910
-            |Bestigor Flesh|#D38A57
-            |Bloodreaver Flesh|#6A4848
-            |Brass Scorpion|#B7885F
-            |Cadian Fleshtone|#C77958
-            |Calgar Blue|#2A497F
-            |Dawnstone|#70756E
-            |Deathclaw Brown|#AF634F
-            |Dorn Yellow|#FFF55A
-            |Elysian Green|#6B8C37
-            |Emperor's Children|#B94278
-            |Evil Sunz Scarlet|#C01411
-            |Fenrisian Grey|#6D94B3
-            |Fire Dragon Bright|#F4874E
-            |Flash Gitz Yellow|#FFEE00
-            |Fulgurite Copper|#C77E4D
-            |Gauss Blaster Green|#84C3AA
-            |Gehenna's Gold|#DBA674
-            |Genestealer Purple|#7761AB
-            |Hoeth Blue|#4C78AF
-            |Ironbreaker|#A1A6A9
-            |Kabalite Green|#038C67
-            |Karak Stone|#BB9662
-            |Kislev Flesh|#D6A875
-            |Liberator Gold|#D3B587
-            |Loren Forest|#50702D
-            |Lothern Blue|#34A2CF
-            |Moot Green|#52B244
-            |Nurgling Green|#849C63
-            |Ogryn Camo|#9DA94B
-            |Pallid Wych Flesh|#CDCEBE
-            |Pink Horror|#90305D
-            |Runefang Steel|#C3CACE
-            |Russ Grey|#507085
-            |Screaming Skull|#B9C099
-            |Skarsnik Green|#5F9370
-            |Skavenblight Dinge|#47413B
-            |Slaanesh Grey|#8B8893
-            |Sotek Green|#0B6974
-            |Squig Orange|#AA4F44
-            |Stormhost Silver|#BBC6C9
-            |Sybarite Green|#17A166
-            |Sycorax Bronze|#CBB394
-            |Tallarn Sand|#A67610
-            |Tau Light Ochre|#BC6B10
-            |Teclis Blue|#3877BF
-            |Temple Guard Blue|#239489
-            |Thunderhawk Blue|#417074
-            |Troll Slayer Orange|#F36D2D
-            |Ulthuan Grey|#C7E0D9
-            |Ungor Flesh|#D6A766
-            |Ushabti Bone|#BBBB7F
-            |Warboss Green|#317E57
-            |Warpstone Glow|#1E7331
-            |Wazdakka Red|#880804
-            |White Scar|#FFFFFF
-            |Wild Rider Red|#EA2F28
-            |Xereus Purple|#471F5F
-            |Yriel Yellow|#FFDA00
-            |Zamesi Desert|#DDA024
+            CIT22-50|Administratum Grey|#949B95
+            CIT22-76|Ahriman Blue|#1F8C9C
+            CIT22-13|Alaitoc Blue|#295788
+            CIT22-15|Altdorf Guard Blue|#1F56A7
+            CIT22-62|Auric Armour Gold|#D4AF37
+            CIT22-79|Baharroth Blue|#58C1CD
+            CIT22-43|Balor Brown|#8B5910
+            CIT22-48|Baneblade Brown|#927F6E
+            CIT22-38|Bestigor Flesh|#D38A57
+            CIT22-92|Bloodreaver Flesh|#6A4848
+            CIT22-84|Blue Horror|#A2BAD2
+            CIT22-65|Brass Scorpion|#B7885F
+            CIT22-36|Cadian Fleshtone|#C77958
+            CIT22-16|Calgar Blue|#2A497F
+            CIT22-94|Canoptek Alloy|#C8A86A
+            CIT22-89|Castellax Bronze|#8A6A3A
+            CIT22-52|Dark Reaper|#3C5051
+            CIT22-49|Dawnstone|#70756E
+            CIT22-41|Deathclaw Brown|#AF634F
+            CIT22-82|Dechala Lilac|#B59ECC
+            CIT22-77|Deepkin Flesh|#D2D4C7
+            CIT22-80|Dorn Yellow|#FFF55A
+            CIT22-30|Elysian Green|#6B8C37
+            CIT22-70|Emperor's Children|#B94278
+            CIT22-51|Eshin Grey|#4A4F53
+            CIT22-05|Evil Sunz Scarlet|#C01411
+            CIT22-68|Fenrisian Grey|#6D94B3
+            CIT22-04|Fire Dragon Bright|#F4874E
+            CIT22-02|Flash Gitz Yellow|#FFEE00
+            CIT22-72|Flayed One Flesh|#CBB48B
+            CIT22-81|Fulgrim Pink|#F4AFCC
+            CIT22-74|Fulgurite Copper|#C77E4D
+            CIT22-78|Gauss Blaster Green|#84C3AA
+            CIT22-61|Gehenna's Gold|#DBA674
+            CIT22-10|Genestealer Purple|#7761AB
+            CIT22-47|Gorthor Brown|#654641
+            CIT22-63|Hashut Copper|#C69169
+            CIT22-14|Hoeth Blue|#4C78AF
+            CIT22-59|Ironbreaker|#A1A6A9
+            CIT22-21|Kabalite Green|#038C67
+            CIT22-86|Kakophoni Purple|#8D74A8
+            CIT22-35|Karak Stone|#BB9662
+            CIT22-37|Kislev Flesh|#D6A875
+            CIT22-93|Knight-Questor Flesh|#A86A5A
+            CIT22-83|Krieg Khaki|#B7AD78
+            CIT22-71|Liberator Gold|#D3B587
+            CIT22-27|Loren Forest|#50702D
+            CIT22-18|Lothern Blue|#34A2CF
+            CIT22-85|Lugganath Orange|#F89E86
+            CIT22-24|Moot Green|#52B244
+            CIT22-29|Nurgling Green|#849C63
+            CIT22-31|Ogryn Camo|#9DA94B
+            CIT22-58|Pallid Wych Flesh|#CDCEBE
+            CIT22-88|Phalanx Yellow|#F2D533
+            CIT22-69|Pink Horror|#90305D
+            CIT22-60|Runefang Steel|#C3CACE
+            CIT22-67|Russ Grey|#507085
+            CIT22-33|Screaming Skull|#B9C099
+            CIT22-26|Skarsnik Green|#5F9370
+            CIT22-54|Skavenblight Dinge|#47413B
+            CIT22-40|Skrag Brown|#904A0F
+            CIT22-73|Skullcrusher Brass|#E9C58B
+            CIT22-12|Slaanesh Grey|#8B8893
+            CIT22-87|Sons of Horus Green|#00545E
+            CIT22-19|Sotek Green|#0B6974
+            CIT22-08|Squig Orange|#AA4F44
+            CIT22-75|Stormhost Silver|#BBC6C9
+            CIT22-55|Stormvermin Fur|#736C66
+            CIT22-28|Straken Green|#628026
+            CIT22-22|Sybarite Green|#17A166
+            CIT22-64|Sycorax Bronze|#CBB394
+            CIT22-34|Tallarn Sand|#A67610
+            CIT22-42|Tau Light Ochre|#BC6B10
+            CIT22-17|Teclis Blue|#3877BF
+            CIT22-20|Temple Guard Blue|#239489
+            CIT22-53|Thunderhawk Blue|#417074
+            CIT22-03|Troll Slayer Orange|#F36D2D
+            CIT22-46|Tuskgor Fur|#883736
+            CIT22-56|Ulthuan Grey|#C7E0D9
+            CIT22-39|Ungor Flesh|#D6A766
+            CIT22-32|Ushabti Bone|#BBBB7F
+            CIT22-90|Vulkan Green|#3E6B4B
+            CIT22-25|Warboss Green|#317E57
+            CIT22-11|Warpfiend Grey|#6C6A75
+            CIT22-23|Warpstone Glow|#1E7331
+            CIT22-07|Wazdakka Red|#880804
+            CIT22-57|White Scar|#FFFFFF
+            CIT22-06|Wild Rider Red|#EA2F28
+            CIT22-91|Word Bearers Red|#8E2A22
+            CIT22-09|Xereus Purple|#471F5F
+            CIT22-01|Yriel Yellow|#FFDA00
+            CIT22-44|Zamesi Desert|#DDA024
         """,
         "Shade" to """
-            |Agrax Earthshade|#3D2F1E
-            |Athonian Camoshade|#4A5A2B
-            |Biel-Tan Green|#1E4F2A
-            |Carroburg Crimson|#6B1A2E
-            |Casandora Yellow|#C68A2A
-            |Coelia Greenshade|#0D4F4C
-            |Drakenhof Nightshade|#1B3A5E
-            |Druchii Violet|#4A2A55
-            |Fuegan Orange|#9B4A1E
-            |Nuln Oil|#14100E
-            |Reikland Fleshshade|#6E3A1F
-            |Seraphim Sepia|#8C5A2B
+            CIT24-15|Agrax Earthshade|#3D2F1E
+            CIT24-21|Athonian Camoshade|#4A5A2B
+            CIT24-34|Berserker Bloodshade|#5A1520
+            CIT24-19|Biel-Tan Green|#1E4F2A
+            CIT24-13|Carroburg Crimson|#6B1A2E
+            CIT24-18|Casandora Yellow|#C68A2A
+            CIT24-22|Coelia Greenshade|#0D4F4C
+            CIT24-17|Drakenhof Nightshade|#1B3A5E
+            CIT24-16|Druchii Violet|#4A2A55
+            CIT24-20|Fuegan Orange|#9B4A1E
+            CIT24-29|Kroak Green|#4A6A2A
+            CIT24-32|Mortarion Grime|#6A6A3A
+            CIT24-14|Nuln Oil|#14100E
+            CIT24-30|Poxwalker|#6E7A5A
+            CIT24-24|Reikland Fleshshade|#6E3A1F
+            CIT24-23|Seraphim Sepia|#8C5A2B
+            CIT24-35|Soulblight Grey|#4A4E5A
+            CIT24-31|Targor Rageshade|#4A2A3A
+            CIT24-33|Tyran Blue|#3A5A8A
         """,
         "Contrast" to """
-            |Aethermatic Blue|#6AA5C4
-            |Aggaros Dunes|#B0884A
-            |Akhelian Green|#126A68
-            |Apothecary White|#E3E6E6
-            |Basilicanum Grey|#4A4A4A
-            |Black Templar|#1C1C1C
-            |Blood Angels Red|#A3141A
-            |Creed Camo|#5A6A3A
-            |Cygor Brown|#3E2A1F
-            |Dark Angels Green|#1E3A24
-            |Darkoath Flesh|#8A5A44
-            |Flesh Tearers Red|#6E1414
-            |Gore-Grunta Fur|#7A3A1E
-            |Gryph-Charger Grey|#6A8AA0
-            |Gryph-Hound Orange|#D85A1F
-            |Guilliman Flesh|#B07355
-            |Iyanden Yellow|#E8A01C
-            |Karandras Green|#2A4A2E
-            |Leviadon Blue|#1C2D4F
-            |Magos Purple|#8A5A9E
-            |Militarum Green|#5E6B2E
-            |Nazdreg Yellow|#A2721D
-            |Ork Flesh|#4A6A2A
-            |Plaguebearer Flesh|#A0A060
-            |Shyish Purple|#4A2A6E
-            |Skeleton Horde|#9A8A5A
-            |Snakebite Leather|#8A5A2B
-            |Space Wolves Grey|#6A8094
-            |Talassar Blue|#1E5C9E
-            |Terradon Turquoise|#0F5C66
-            |Ultramarines Blue|#1A3D7C
-            |Volupus Pink|#7A2A5A
-            |Warp Lightning|#3A8A2C
-            |Wyldwood|#4A2F1E
+            CIT29-48|Aeldari Emerald|#0A6A5A
+            CIT29-41|Aethermatic Blue|#6AA5C4
+            CIT29-25|Aggaros Dunes|#B0884A
+            CIT29-19|Akhelian Green|#126A68
+            CIT29-34|Apothecary White|#E3E6E6
+            CIT29-59|Asurmen Blue|#1E4A8A
+            CIT29-67|Baal Red|#B0141E
+            CIT29-53|Bad Moon Yellow|#E8C21A
+            CIT29-37|Basilicanum Grey|#4A4A4A
+            CIT29-45|Black Legion|#2A2A2E
+            CIT29-38|Black Templar|#1C1C1C
+            CIT29-12|Blood Angels Red|#A3141A
+            CIT29-56|Briar Queen Chill|#9AB0B8
+            CIT29-60|Celestium Blue|#3A7AB0
+            CIT29-23|Creed Camo|#5A6A3A
+            CIT29-29|Cygor Brown|#3E2A1F
+            CIT29-20|Dark Angels Green|#1E3A24
+            CIT29-33|Darkoath Flesh|#8A5A44
+            CIT29-66|Doomfire Magenta|#B01E6A
+            CIT29-65|Dreadful Visage|#3A3A40
+            CIT29-13|Flesh Tearers Red|#6E1414
+            CIT29-57|Frostheart|#6AB0D0
+            CIT29-31|Fyreslayer Flesh|#A85A3A
+            CIT29-44|Garaghak's Sewer|#6A5A3A
+            CIT29-28|Gore-Grunta Fur|#7A3A1E
+            CIT29-35|Gryph-Charger Grey|#6A8AA0
+            CIT29-11|Gryph-Hound Orange|#D85A1F
+            CIT29-32|Guilliman Flesh|#B07355
+            CIT29-49|Gutrippa Flesh|#6A8A4A
+            CIT29-54|Imperial Fist|#E8B81E
+            CIT29-52|Ironjawz Yellow|#D9A21A
+            CIT29-10|Iyanden Yellow|#E8A01C
+            CIT29-50|Karandras Green|#2A4A2E
+            CIT29-55|Kroxigor Scales|#2A6A8A
+            CIT29-17|Leviadon Blue|#1C2D4F
+            CIT29-63|Luxion Purple|#6A3A9A
+            CIT29-68|Magmadroth Flame|#D8501E
+            CIT29-16|Magos Purple|#8A5A9E
+            CIT29-47|Mantis Warriors Green|#4A8A3A
+            CIT29-24|Militarum Green|#5E6B2E
+            CIT29-21|Nazdreg Yellow|#A2721D
+            CIT29-22|Ork Flesh|#4A6A2A
+            CIT29-42|Plaguebearer Flesh|#A0A060
+            CIT29-58|Pylar Glacier|#8AC8E0
+            CIT29-46|Ratling Grime|#4A3E2E
+            CIT29-15|Shyish Purple|#4A2A6E
+            CIT29-64|Sigvald Burgundy|#6A1E2E
+            CIT29-26|Skeleton Horde|#9A8A5A
+            CIT29-27|Snakebite Leather|#8A5A2B
+            CIT29-36|Space Wolves Grey|#6A8094
+            CIT29-61|Stormfiend|#4A4640
+            CIT29-51|Striking Scorpion Green|#2A7A3A
+            CIT29-39|Talassar Blue|#1E5C9E
+            CIT29-43|Terradon Turquoise|#0F5C66
+            CIT29-18|Ultramarines Blue|#1A3D7C
+            CIT29-14|Volupus Pink|#7A2A5A
+            CIT29-40|Warp Lightning|#3A8A2C
+            CIT29-30|Wyldwood|#4A2F1E
         """,
         "Dry" to """
             |Astorath Red|#DD482B
