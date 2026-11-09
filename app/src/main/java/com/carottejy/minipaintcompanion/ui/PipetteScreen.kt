@@ -46,6 +46,13 @@ import androidx.compose.material.icons.outlined.PhotoCamera
 import androidx.compose.material.icons.outlined.PhotoLibrary
 import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.FilledIconToggleButton
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material.icons.outlined.Contrast
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -101,7 +108,7 @@ private fun decodePins(s: String) = s.split("|").filter { it.isNotBlank() }.mapN
 private fun pipetteFile(context: Context) = File(File(context.cacheDir, "pipette").apply { mkdirs() }, "image.jpg")
 
 /** Charge l'image réduite (≤ 1600 px) et redressée selon l'EXIF. */
-private suspend fun loadBitmap(file: File, maxSide: Int = 1600): Bitmap? = withContext(Dispatchers.IO) {
+internal suspend fun loadBitmap(file: File, maxSide: Int = 2400): Bitmap? = withContext(Dispatchers.IO) {
     if (!file.exists()) return@withContext null
     val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
     BitmapFactory.decodeFile(file.path, bounds)
@@ -122,22 +129,6 @@ private suspend fun loadBitmap(file: File, maxSide: Int = 1600): Bitmap? = withC
     else Bitmap.createBitmap(bmp, 0, 0, bmp.width, bmp.height, Matrix().apply { postRotate(degrees) }, true)
 }
 
-/** Moyenne des pixels autour du point : évite de tomber sur un reflet ou un grain isolé. */
-private fun sampleHex(bmp: Bitmap, fx: Float, fy: Float): String {
-    val cx = (fx * (bmp.width - 1)).roundToInt()
-    val cy = (fy * (bmp.height - 1)).roundToInt()
-    val r = max(2, min(bmp.width, bmp.height) / 150)
-    var rs = 0L; var gs = 0L; var bs = 0L; var n = 0
-    for (y in max(0, cy - r)..min(bmp.height - 1, cy + r)) {
-        for (x in max(0, cx - r)..min(bmp.width - 1, cx + r)) {
-            val c = bmp.getPixel(x, y)
-            rs += (c shr 16) and 0xFF; gs += (c shr 8) and 0xFF; bs += c and 0xFF; n++
-        }
-    }
-    if (n == 0) return "#808080"
-    return ColorTheory.rgbToHex((rs / n).toInt(), (gs / n).toInt(), (bs / n).toInt())
-}
-
 private fun closeness(delta: Float) = when {
     delta < 3f -> "quasi identique"
     delta < 7f -> "très proche"
@@ -145,12 +136,42 @@ private fun closeness(delta: Float) = when {
     else -> "approchant"
 }
 
+/** Onglet « Pipette » : deux modes, la pipette à couleurs et l'étude des valeurs. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun PipetteScreen(
+    data: AppData,
+    repo: Repository,
+    onHarmonies: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var valueMode by rememberSaveable { mutableStateOf(false) }
+    Column(modifier) {
+        SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 12.dp)) {
+            SegmentedButton(
+                selected = !valueMode,
+                onClick = { valueMode = false },
+                shape = SegmentedButtonDefaults.itemShape(0, 2),
+                icon = { Icon(Icons.Outlined.Colorize, contentDescription = null, modifier = Modifier.size(18.dp)) },
+            ) { Text("Pipette") }
+            SegmentedButton(
+                selected = valueMode,
+                onClick = { valueMode = true },
+                shape = SegmentedButtonDefaults.itemShape(1, 2),
+                icon = { Icon(Icons.Outlined.Contrast, contentDescription = null, modifier = Modifier.size(18.dp)) },
+            ) { Text("Valeur") }
+        }
+        if (valueMode) ValueContent(data, repo, Modifier.weight(1f))
+        else ColorPickerContent(data, repo, onHarmonies, Modifier.weight(1f))
+    }
+}
+
 /**
- * Onglet « Pipette » : on relève une couleur sur une photo avec un curseur,
+ * Pipette : on relève une couleur sur une photo avec un curseur,
  * et l'appli propose les pots les plus proches, à ajouter à la liste d'achat.
  */
 @Composable
-fun PipetteScreen(
+private fun ColorPickerContent(
     data: AppData,
     repo: Repository,
     onHarmonies: (String) -> Unit,
@@ -164,17 +185,28 @@ fun PipetteScreen(
     var fy by rememberSaveable { mutableStateOf(0.5f) }
     var pinsText by rememberSaveable { mutableStateOf("") }
     var onlyMine by rememberSaveable { mutableStateOf(false) }
+    var gray by rememberSaveable { mutableStateOf(false) }
+    val zoom = remember { ZoomState() }
+    // Rayon de prélèvement en pixels de la photo : plus on zoome, plus il est précis.
+    var sampleRadius by remember { mutableStateOf(-1) }
     val pins = remember(pinsText) { decodePins(pinsText) }
 
     val bitmap by produceState<Bitmap?>(null, imageVersion) {
         value = if (imageVersion == 0) null else loadBitmap(pipetteFile(context))
     }
-    val hex = remember(bitmap, fx, fy) { bitmap?.let { sampleHex(it, fx, fy) } }
+    val hex = remember(bitmap, fx, fy, sampleRadius) {
+        bitmap?.let { b ->
+            val r = if (sampleRadius >= 0) sampleRadius else max(2, min(b.width, b.height) / 150)
+            sampleAverageHex(b, fx, fy, r)
+        }
+    }
 
     fun newImage() {
         imageVersion++
         fx = 0.5f; fy = 0.5f
         pinsText = ""
+        sampleRadius = -1
+        zoom.reset()
     }
 
     val pickImage = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri: Uri? ->
@@ -246,11 +278,32 @@ fun PipetteScreen(
         }
 
         item {
-            PickerImage(
+            val cursorHex = hex ?: "#808080"
+            val density = LocalDensity.current
+            val sampleDp = with(density) { 6.dp.toPx() }
+            fun moveTo(m: ImageMapper, p: Offset) {
+                val (x, y) = m.toFraction(p)
+                fx = x; fy = y
+                sampleRadius = max(0, (sampleDp / m.screenPerBitmapPx).roundToInt())
+            }
+            ZoomableImage(
                 bitmap = bmp,
-                fx = fx, fy = fy, hex = hex ?: "#808080",
-                pins = pins,
-                onMove = { x, y -> fx = x; fy = y },
+                zoom = zoom,
+                grayscale = gray,
+                onTouchStart = ::moveTo,
+                onTouchMove = ::moveTo,
+                overlay = { m -> drawPipetteOverlay(m, fx, fy, if (gray) grayOf(cursorHex) else hexColor(cursorHex), pins, gray) },
+                extraButtons = {
+                    FilledIconToggleButton(checked = gray, onCheckedChange = { gray = it }, modifier = Modifier.size(40.dp)) {
+                        Icon(Icons.Outlined.Contrast, contentDescription = if (gray) "Repasser en couleur" else "Passer en noir et blanc")
+                    }
+                },
+            )
+            Text(
+                "Pince à deux doigts pour zoomer (jusqu'à ×16) et te déplacer · un doigt pour viser · ◐ noir et blanc",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 6.dp),
             )
             Spacer(Modifier.height(12.dp))
 
@@ -263,11 +316,19 @@ fun PipetteScreen(
                     .padding(12.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Box(Modifier.size(width = 56.dp, height = 40.dp).clip(RoundedCornerShape(10.dp)).background(hexColor(hex ?: "#808080")))
+                Box(Modifier.size(width = 56.dp, height = 40.dp).clip(RoundedCornerShape(10.dp)).background(hexColor(cursorHex)))
+                Spacer(Modifier.width(4.dp))
+                Box(Modifier.size(width = 20.dp, height = 40.dp).clip(RoundedCornerShape(6.dp)).background(grayOf(cursorHex)))
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
                     Text("COULEUR RELEVÉE", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
                     Text(hex ?: "", style = MaterialTheme.typography.titleMedium)
+                    val v = valueOf(cursorHex)
+                    Text(
+                        "Valeur ${v.roundToInt()}/100 · niveau ${valueLevel(v)}/10",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
                 IconButton(
                     onClick = {
@@ -393,77 +454,30 @@ fun PipetteScreen(
     }
 }
 
-/** Image affichée en entier, avec un curseur à déplacer au doigt et une loupe de la couleur relevée. */
-@Composable
-private fun PickerImage(
-    bitmap: Bitmap,
-    fx: Float,
-    fy: Float,
-    hex: String,
-    pins: List<Pin>,
-    onMove: (Float, Float) -> Unit,
-) {
-    val image = remember(bitmap) { bitmap.asImageBitmap() }
-    val density = LocalDensity.current
-    BoxWithConstraints(
-        Modifier
-            .fillMaxWidth()
-            .height(380.dp)
-            .clip(RoundedCornerShape(20.dp))
-            .background(Color.Black)
-    ) {
-        val w = with(density) { maxWidth.toPx() }
-        val h = with(density) { maxHeight.toPx() }
-        val scale = min(w / bitmap.width, h / bitmap.height)
-        val dw = bitmap.width * scale
-        val dh = bitmap.height * scale
-        val left = (w - dw) / 2f
-        val top = (h - dh) / 2f
 
-        fun toFraction(p: Offset) = Pair(((p.x - left) / dw).coerceIn(0f, 1f), ((p.y - top) / dh).coerceIn(0f, 1f))
-
-        Image(image, contentDescription = null, contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize())
-        Canvas(
-            Modifier
-                .fillMaxSize()
-                .pointerInput(bitmap, w, h) {
-                    detectTapGestures { p -> val (x, y) = toFraction(p); onMove(x, y) }
-                }
-                .pointerInput(bitmap, w, h) {
-                    var cur = Offset.Zero
-                    detectDragGestures(
-                        onDragStart = { p -> cur = p; val (x, y) = toFraction(p); onMove(x, y) },
-                    ) { change, drag ->
-                        change.consume()
-                        cur += drag
-                        val (x, y) = toFraction(cur)
-                        onMove(x, y)
-                    }
-                }
-        ) {
-            // Couleurs épinglées
-            pins.forEach { pin ->
-                val c = Offset(left + pin.fx * dw, top + pin.fy * dh)
-                drawCircle(Color.Black, radius = 9.dp.toPx(), center = c)
-                drawCircle(Color.White, radius = 7.dp.toPx(), center = c)
-                drawCircle(hexColor(pin.hex), radius = 5.dp.toPx(), center = c)
-            }
-            // Curseur
-            val c = Offset(left + fx * dw, top + fy * dh)
-            val r = 14.dp.toPx()
-            drawCircle(Color.Black, radius = r + 2f, center = c, style = Stroke(5f))
-            drawCircle(Color.White, radius = r, center = c, style = Stroke(3f))
-            drawLine(Color.White, Offset(c.x - r - 8f, c.y), Offset(c.x - r / 2, c.y), strokeWidth = 3f)
-            drawLine(Color.White, Offset(c.x + r / 2, c.y), Offset(c.x + r + 8f, c.y), strokeWidth = 3f)
-            drawLine(Color.White, Offset(c.x, c.y - r - 8f), Offset(c.x, c.y - r / 2), strokeWidth = 3f)
-            drawLine(Color.White, Offset(c.x, c.y + r / 2), Offset(c.x, c.y + r + 8f), strokeWidth = 3f)
-            // Loupe de couleur au-dessus du doigt (en dessous si on est trop haut)
-            val bubbleR = 24.dp.toPx()
-            val above = c.y - r - bubbleR * 2.2f > 0
-            val bc = Offset(c.x.coerceIn(bubbleR + 4f, size.width - bubbleR - 4f), if (above) c.y - r - bubbleR * 1.4f else c.y + r + bubbleR * 1.4f)
-            drawCircle(Color.Black, radius = bubbleR + 4f, center = bc)
-            drawCircle(Color.White, radius = bubbleR + 2f, center = bc)
-            drawCircle(hexColor(hex), radius = bubbleR, center = bc)
-        }
+/** Repères épinglés, curseur et loupe de couleur, dessinés par-dessus l'image zoomable. */
+private fun DrawScope.drawPipetteOverlay(m: ImageMapper, fx: Float, fy: Float, bubble: Color, pins: List<Pin>, gray: Boolean) {
+    pins.forEach { pin ->
+        val c = m.toScreen(pin.fx, pin.fy)
+        drawCircle(Color.Black, radius = 9.dp.toPx(), center = c)
+        drawCircle(Color.White, radius = 7.dp.toPx(), center = c)
+        drawCircle(if (gray) grayOf(pin.hex) else hexColor(pin.hex), radius = 5.dp.toPx(), center = c)
     }
+    val c = m.toScreen(fx, fy)
+    val r = 14.dp.toPx()
+    val inner = 6.dp.toPx()
+    drawCircle(Color.Black, radius = r + 2f, center = c, style = Stroke(5f))
+    drawCircle(Color.White, radius = r, center = c, style = Stroke(3f))
+    // Zone réellement prélevée
+    drawCircle(Color.White.copy(alpha = 0.8f), radius = inner, center = c, style = Stroke(1.5f))
+    drawLine(Color.White, Offset(c.x - r - 8f, c.y), Offset(c.x - r / 2, c.y), strokeWidth = 3f)
+    drawLine(Color.White, Offset(c.x + r / 2, c.y), Offset(c.x + r + 8f, c.y), strokeWidth = 3f)
+    drawLine(Color.White, Offset(c.x, c.y - r - 8f), Offset(c.x, c.y - r / 2), strokeWidth = 3f)
+    drawLine(Color.White, Offset(c.x, c.y + r / 2), Offset(c.x, c.y + r + 8f), strokeWidth = 3f)
+    val bubbleR = 24.dp.toPx()
+    val above = c.y - r - bubbleR * 2.2f > 0
+    val bc = Offset(c.x.coerceIn(bubbleR + 4f, size.width - bubbleR - 4f), if (above) c.y - r - bubbleR * 1.4f else c.y + r + bubbleR * 1.4f)
+    drawCircle(Color.Black, radius = bubbleR + 4f, center = bc)
+    drawCircle(Color.White, radius = bubbleR + 2f, center = bc)
+    drawCircle(bubble, radius = bubbleR, center = bc)
 }

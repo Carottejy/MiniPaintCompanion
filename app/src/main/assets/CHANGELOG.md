@@ -1,4 +1,8 @@
 ## @VERSION@ — @DATE@
+- Pipette : zoom jusqu'à ×16 (pincer à deux doigts, ou boutons + / −), prélèvement plus précis quand on zoome, bouton ◐ pour passer la photo en noir et blanc, et valeur de gris de la couleur relevée.
+- Nouveau mode « Valeur » dans l'onglet Pipette : photographie tes pots, la photo s'affiche en noir et blanc ; touche chaque pot pour mesurer sa valeur. Les pots sont classés et numérotés du plus foncé au plus clair (ou l'inverse), avec une échelle de gris, l'écart de contraste et les pots de valeur quasi identique signalés.
+
+## 1.0.30 — 07/11/2026
 - Catalogue Citadel complété avec les gammes actuelles : 76 pots ajoutés (dont Dark Reaper, Blue Horror, Baneblade Brown, Eshin Grey, XV-88, Corvus Black, Kroak Green, Tyran Blue, Frostheart…). Base, Layer, Shade et Contrast sont désormais complètes.
 - Chaque pot Citadel affiche sa référence officielle (ex. CIT22-52), utilisable dans la recherche.
 
